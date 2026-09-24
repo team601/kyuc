@@ -17,22 +17,33 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setError('Invalid email or password. Please try again.');
-    } else {
-      router.push('/dashboard');
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setError(error.message || 'Invalid email or password. Please try again.');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Connection error. Please check your Supabase credentials.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleGoogleLogin = async () => {
-    const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=/dashboard` },
-    });
+    setError('');
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/auth/callback?next=/dashboard` },
+      });
+      if (error) setError(error.message);
+    } catch (err: any) {
+      setError(err?.message || 'Google sign-in error. Please check credentials.');
+    }
   };
 
   return (
