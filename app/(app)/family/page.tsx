@@ -17,6 +17,20 @@ export default async function FamilyPage() {
         <Link href="/dashboard" style={{ fontSize: 'var(--text-sm)', color: 'var(--color-muted)', textDecoration: 'none', fontWeight: 500 }}>
           ← Back to Stories
         </Link>
+        <form action="/auth/signout" method="POST">
+          <button type="submit" style={{
+            background: 'none',
+            border: 'none',
+            color: '#DC2626',
+            fontSize: 'var(--text-sm)',
+            fontWeight: 500,
+            cursor: 'pointer',
+            padding: '0.4rem 0.8rem',
+            borderRadius: 'var(--radius-md)',
+          }}>
+            Sign Out
+          </button>
+        </form>
       </header>
       <main style={{ maxWidth: '600px', margin: '0 auto', padding: '4rem 2rem', textAlign: 'center' }}>
         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👨‍👩‍👧‍👦</div>

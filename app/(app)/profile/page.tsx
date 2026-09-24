@@ -32,6 +32,21 @@ export default async function ProfilePage() {
           </svg>
           <span>kyuc<sup>°</sup></span>
         </Link>
+        <form action="/auth/signout" method="POST">
+          <button type="submit" style={{
+            background: 'none',
+            border: 'none',
+            color: '#DC2626',
+            fontSize: 'var(--text-sm)',
+            fontWeight: 500,
+            cursor: 'pointer',
+            padding: '0.4rem 0.8rem',
+            borderRadius: 'var(--radius-md)',
+            transition: 'background 0.15s ease'
+          }}>
+            Sign Out
+          </button>
+        </form>
       </header>
 
       <main className={styles.main}>
@@ -69,6 +84,15 @@ export default async function ProfilePage() {
         <div className={styles.actions}>
           <Link href="/story/new" className="btn btn-primary">+ New Story</Link>
           <Link href="/family" className="btn btn-ghost">Family Space</Link>
+          <form action="/auth/signout" method="POST" style={{ display: 'inline' }}>
+            <button
+              type="submit"
+              className="btn btn-ghost"
+              style={{ color: '#DC2626', borderColor: '#FCA5A5' }}
+            >
+              Sign Out / Đăng xuất
+            </button>
+          </form>
         </div>
       </main>
     </div>
