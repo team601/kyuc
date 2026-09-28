@@ -1,5 +1,134 @@
 export type Language = 'en' | 'vi';
 
+export const backendTranslations = {
+  vi: {
+    nav: {
+      myStories: 'Câu chuyện của tôi',
+      newStory: 'Thêm câu chuyện',
+      familySpace: 'Không gian gia đình',
+      profile: 'Hồ sơ',
+      signOut: 'Đăng xuất',
+    },
+    dashboard: {
+      greeting: 'Xin chào',
+      subHasStories: (count: number) =>
+        `Bạn đã lưu giữ ${count} câu ${count === 1 ? 'chuyện' : 'chuyện'}. Tiếp tục nhé!`,
+      subNoStories: 'Hãy bắt đầu ghi lại ký ức gia đình đầu tiên hôm nay.',
+      newStoryBtn: '+ Câu chuyện mới',
+      stats: {
+        stories: 'Câu chuyện',
+        audioRecordings: 'Bản ghi âm',
+        familyMember: 'Thành viên gia đình',
+      },
+      empty: {
+        title: 'Chưa có câu chuyện nào',
+        desc: 'Chỉ cần một câu hỏi sâu sắc là đủ. Chọn một gợi ý và để ký ức quay trở lại.',
+        cta: 'Tạo câu chuyện đầu tiên',
+      },
+      story: {
+        audioRecorded: '🎙 Đã ghi âm',
+        readMore: 'Đọc thêm →',
+      },
+    },
+    profile: {
+      backToStories: '← Quay lại câu chuyện',
+      memberSince: 'Thành viên từ',
+      stats: {
+        totalStories: 'Tổng câu chuyện',
+        roots: 'Nguồn cội',
+        traditions: 'Truyền thống',
+        lifeLessons: 'Bài học cuộc đời',
+      },
+      actions: {
+        newStory: '+ Câu chuyện mới',
+        familySpace: 'Không gian gia đình',
+        signOut: 'Đăng xuất',
+      },
+    },
+    family: {
+      title: 'Không gian gia đình',
+      comingSoon: 'Sắp ra mắt',
+      backToDashboard: '← Quay lại',
+    },
+    story: {
+      backToDashboard: '← Quay lại câu chuyện',
+      audioSection: 'Bản ghi âm',
+      textSection: 'Nội dung',
+      editStory: 'Chỉnh sửa',
+      deleteStory: 'Xóa',
+      category: 'Danh mục',
+      createdAt: 'Ngày tạo',
+    },
+    languageSwitcher: {
+      label: 'Ngôn ngữ',
+    },
+  },
+  en: {
+    nav: {
+      myStories: 'My Stories',
+      newStory: 'New Story',
+      familySpace: 'Family Space',
+      profile: 'Profile',
+      signOut: 'Sign Out',
+    },
+    dashboard: {
+      greeting: 'Hello',
+      subHasStories: (count: number) =>
+        `You have preserved ${count} ${count === 1 ? 'story' : 'stories'}. Keep it going!`,
+      subNoStories: 'Start capturing your first family memory today.',
+      newStoryBtn: '+ New Story',
+      stats: {
+        stories: 'Stories',
+        audioRecordings: 'Audio Recordings',
+        familyMember: 'Family Member',
+      },
+      empty: {
+        title: 'No stories preserved yet',
+        desc: 'A single thoughtful question is all it takes. Pick a prompt and let the memories return.',
+        cta: 'Create First Story',
+      },
+      story: {
+        audioRecorded: '🎙 Audio recorded',
+        readMore: 'Read story →',
+      },
+    },
+    profile: {
+      backToStories: '← Back to Stories',
+      memberSince: 'Member since',
+      stats: {
+        totalStories: 'Total Stories',
+        roots: 'Roots',
+        traditions: 'Traditions',
+        lifeLessons: 'Life Lessons',
+      },
+      actions: {
+        newStory: '+ New Story',
+        familySpace: 'Family Space',
+        signOut: 'Sign Out',
+      },
+    },
+    family: {
+      title: 'Family Space',
+      comingSoon: 'Coming Soon',
+      backToDashboard: '← Back',
+    },
+    story: {
+      backToDashboard: '← Back to Stories',
+      audioSection: 'Audio Recording',
+      textSection: 'Content',
+      editStory: 'Edit',
+      deleteStory: 'Delete',
+      category: 'Category',
+      createdAt: 'Created',
+    },
+    languageSwitcher: {
+      label: 'Language',
+    },
+  },
+};
+
+export type BackendT = typeof backendTranslations.en;
+
 export const translations = {
   vi: {
     nav: {
