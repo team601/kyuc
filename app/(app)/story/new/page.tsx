@@ -4,8 +4,11 @@ import { useState, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { getRandomQuestion, categoryMeta, type Category, type Language } from '@/lib/questions';
+import { getRandomQuestion, categoryMeta, type Category } from '@/lib/questions';
 import PhotoUploader from '@/components/story/PhotoUploader';
+import { useLanguage } from '@/lib/LanguageContext';
+import { backendTranslations } from '@/lib/translations';
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import styles from './new.module.css';
 
 function NewStoryContent() {
@@ -13,8 +16,10 @@ function NewStoryContent() {
   const searchParams = useSearchParams();
   const initialCat = (searchParams.get('category') as Category) || 'roots';
 
+  const { lang, setLang } = useLanguage();
+  const bt = backendTranslations[lang];
+
   const [category, setCategory] = useState<Category>(initialCat);
-  const [lang, setLang] = useState<Language>('en');
   const [question, setQuestion] = useState(() => getRandomQuestion(initialCat));
   const [title, setTitle] = useState('');
   const [storyText, setStoryText] = useState('');
@@ -73,9 +78,11 @@ function NewStoryContent() {
       setRecordingTime(0);
       timerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
     } catch {
-      alert('Could not access microphone. Please check browser permissions.');
+      alert(lang === 'vi'
+        ? 'Không thể truy cập micro. Vui lòng kiểm tra quyền trình duyệt.'
+        : 'Could not access microphone. Please check browser permissions.');
     }
-  }, []);
+  }, [lang]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
@@ -87,7 +94,9 @@ function NewStoryContent() {
 
   const handleSave = async () => {
     if (!storyText.trim() && !audioBlob && !photoFile) {
-      alert('Please write a story, record audio, or attach a photo.');
+      alert(lang === 'vi'
+        ? 'Vui lòng viết câu chuyện, ghi âm hoặc đính kèm ảnh.'
+        : 'Please write a story, record audio, or attach a photo.');
       return;
     }
     setSaving(true);
@@ -138,7 +147,7 @@ function NewStoryContent() {
     }).select().single();
 
     if (error) {
-      alert('Could not save story. Please try again.');
+      alert(lang === 'vi' ? 'Không thể lưu câu chuyện. Vui lòng thử lại.' : 'Could not save story. Please try again.');
     } else if (story) {
       router.push(`/story/${story.id}`);
     }
@@ -152,7 +161,7 @@ function NewStoryContent() {
       {/* Header */}
       <header className={styles.header}>
         <Link href="/dashboard" className={styles.back}>
-          ← Back to Stories
+          {bt.newStory.backToStories}
         </Link>
         <Link href="/" className={styles.logo}>
           <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
@@ -160,15 +169,18 @@ function NewStoryContent() {
           </svg>
           <span>kyuc<sup>°</sup></span>
         </Link>
+        <div className={styles.headerLangWrap}>
+          <LanguageSwitcher />
+        </div>
       </header>
 
       <main className={styles.main}>
         {/* Step 1: Choose Category */}
         {step === 'category' && (
           <div className={styles.stepWrap}>
-            <p className="section-label">Begin your archive</p>
-            <h1 className={styles.stepTitle}>What would you like to explore?</h1>
-            <p className={styles.stepDesc}>Choose a theme to discover thoughtful prompts.</p>
+            <p className="section-label">{bt.newStory.stepCategory.eyebrow}</p>
+            <h1 className={styles.stepTitle}>{bt.newStory.stepCategory.title}</h1>
+            <p className={styles.stepDesc}>{bt.newStory.stepCategory.desc}</p>
 
             <div className={styles.categoryGrid}>
               {(Object.keys(categoryMeta) as Category[]).map(cat => {
@@ -181,9 +193,9 @@ function NewStoryContent() {
                     style={{ background: m.color }}
                   >
                     <span className={styles.catNumber}>{m.number}</span>
-                    <h3 className={styles.catLabel}>{m.label.en}</h3>
-                    <p className={styles.catTagline}>{m.tagline.en}</p>
-                    <p className={styles.catSample}>{m.sampleQuestion.en}</p>
+                    <h3 className={styles.catLabel}>{m.label[lang]}</h3>
+                    <p className={styles.catTagline}>{m.tagline[lang]}</p>
+                    <p className={styles.catSample}>{m.sampleQuestion[lang]}</p>
                   </button>
                 );
               })}
@@ -196,16 +208,16 @@ function NewStoryContent() {
           <div className={styles.recordWrap}>
             <div className={styles.recordLeft}>
               <p className="section-label" style={{ color: 'var(--color-brand)' }}>
-                {meta.number} — {meta.label.en.toUpperCase()}
+                {meta.number} — {meta.label[lang].toUpperCase()}
               </p>
               <h2 className={styles.recordTitle}>
-                Capture their story.
+                {bt.newStory.stepRecord.title}
               </h2>
               <p className={styles.recordDesc}>
-                Write it down, record their voice, or both.
+                {bt.newStory.stepRecord.desc}
               </p>
 
-              {/* Language */}
+              {/* Language toggle — synced with LanguageContext */}
               <div className={styles.langRow}>
                 <button
                   className={lang === 'en' ? styles.langActive : styles.langBtn}
@@ -221,7 +233,7 @@ function NewStoryContent() {
                 onClick={() => setStep('category')}
                 className={styles.changeCategory}
               >
-                ← Change theme
+                {bt.newStory.stepRecord.changeTheme}
               </button>
             </div>
 
@@ -231,18 +243,18 @@ function NewStoryContent() {
                 <p className={styles.questionLabel}>{meta.label[lang]}</p>
                 <h3 className={styles.question}>{question[lang]}</h3>
                 <button onClick={handleNextQuestion} className={styles.nextQ}>
-                  Another prompt ↻
+                  {bt.newStory.stepRecord.anotherPrompt}
                 </button>
               </div>
 
               {/* Title */}
               <div>
-                <label className="form-label" htmlFor="story-title">Story Title (optional)</label>
+                <label className="form-label" htmlFor="story-title">{bt.newStory.stepRecord.titleLabel}</label>
                 <input
                   id="story-title"
                   type="text"
                   className="form-input"
-                  placeholder="e.g. Grandma's secret recipe..."
+                  placeholder={bt.newStory.stepRecord.titlePlaceholder}
                   value={title}
                   onChange={e => setTitle(e.target.value)}
                 />
@@ -250,10 +262,10 @@ function NewStoryContent() {
 
               {/* Text */}
               <div>
-                <label className="form-label">Written Story</label>
+                <label className="form-label">{bt.newStory.stepRecord.storyLabel}</label>
                 <textarea
                   className="form-textarea"
-                  placeholder="I remember when..."
+                  placeholder={bt.newStory.stepRecord.storyPlaceholder}
                   value={storyText}
                   onChange={e => setStoryText(e.target.value)}
                   rows={6}
@@ -274,13 +286,13 @@ function NewStoryContent() {
                   onClick={isRecording ? stopRecording : startRecording}
                 >
                   {isRecording ? (
-                    <><span className={styles.recDot} /> Stop recording — {formatTime(recordingTime)}</>
+                    <><span className={styles.recDot} /> {bt.newStory.stepRecord.stopRecording} {formatTime(recordingTime)}</>
                   ) : (
-                    <><span className={styles.recDotWhite} /> Record story</>
+                    <><span className={styles.recDotWhite} /> {bt.newStory.stepRecord.startRecording}</>
                   )}
                 </button>
                 {!isRecording && recordingTime > 0 && (
-                  <span className={styles.recorded}>✓ Recorded {formatTime(recordingTime)}</span>
+                  <span className={styles.recorded}>{bt.newStory.stepRecord.recorded} {formatTime(recordingTime)}</span>
                 )}
               </div>
 
@@ -294,7 +306,7 @@ function NewStoryContent() {
                 onClick={handleSave}
                 disabled={saving}
               >
-                {saving ? 'Saving…' : '💾 Save to Family Archive'}
+                {saving ? bt.newStory.stepRecord.saving : bt.newStory.stepRecord.save}
               </button>
             </div>
           </div>

@@ -22,6 +22,11 @@
 
 .back:hover { color: var(--color-ink); }
 
+.headerLangWrap {
+  display: flex;
+  align-items: center;
+}
+
 .logo {
   display: flex;
   align-items: center;

@@ -62,6 +62,29 @@ export const backendTranslations = {
     languageSwitcher: {
       label: 'Ngôn ngữ',
     },
+    newStory: {
+      backToStories: '← Quay lại câu chuyện',
+      stepCategory: {
+        eyebrow: 'Bắt đầu lưu trữ',
+        title: 'Bạn muốn khám phá điều gì?',
+        desc: 'Chọn một chủ đề để khám phá những câu hỏi sâu sắc.',
+      },
+      stepRecord: {
+        changeTheme: '← Đổi chủ đề',
+        title: 'Ghi lại câu chuyện của họ.',
+        desc: 'Viết xuống, ghi âm giọng nói, hoặc cả hai.',
+        anotherPrompt: 'Câu hỏi khác ↻',
+        titleLabel: 'Tiêu đề câu chuyện (tùy chọn)',
+        titlePlaceholder: 'VD: Công thức bí mật của bà...',
+        storyLabel: 'Câu chuyện viết tay',
+        storyPlaceholder: 'Tôi nhớ khi...',
+        stopRecording: 'Dừng ghi âm —',
+        startRecording: 'Bắt đầu ghi âm',
+        recorded: '✓ Đã ghi',
+        saving: 'Đang lưu…',
+        save: '💾 Lưu vào Kho Gia Đình',
+      },
+    },
   },
   en: {
     nav: {
@@ -123,6 +146,29 @@ export const backendTranslations = {
     },
     languageSwitcher: {
       label: 'Language',
+    },
+    newStory: {
+      backToStories: '← Back to Stories',
+      stepCategory: {
+        eyebrow: 'Begin your archive',
+        title: 'What would you like to explore?',
+        desc: 'Choose a theme to discover thoughtful prompts.',
+      },
+      stepRecord: {
+        changeTheme: '← Change theme',
+        title: 'Capture their story.',
+        desc: 'Write it down, record their voice, or both.',
+        anotherPrompt: 'Another prompt ↻',
+        titleLabel: 'Story Title (optional)',
+        titlePlaceholder: 'e.g. Grandma\'s secret recipe...',
+        storyLabel: 'Written Story',
+        storyPlaceholder: 'I remember when...',
+        stopRecording: 'Stop recording —',
+        startRecording: 'Record story',
+        recorded: '✓ Recorded',
+        saving: 'Saving…',
+        save: '💾 Save to Family Archive',
+      },
     },
   },
 };
