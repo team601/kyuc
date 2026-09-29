@@ -7,14 +7,16 @@ interface PhotoUploaderProps {
   onPhotoSelected: (file: File | null) => void;
   caption: string;
   onCaptionChange: (caption: string) => void;
+  initialPreview?: string | null;
 }
 
 export default function PhotoUploader({
   onPhotoSelected,
   caption,
   onCaptionChange,
+  initialPreview,
 }: PhotoUploaderProps) {
-  const [preview, setPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(initialPreview || null);
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -121,7 +123,7 @@ export default function PhotoUploader({
   };
 
   const handleRemove = () => {
-    if (preview) {
+    if (preview && preview.startsWith('blob:')) {
       URL.revokeObjectURL(preview);
     }
     setPreview(null);

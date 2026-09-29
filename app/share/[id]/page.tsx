@@ -42,7 +42,7 @@ export default async function PublicSharePage({
     life_lessons: { en: 'Life Lessons', vi: 'Bài Học Cuộc Đời' },
   };
 
-  const catLabel = categoryLabels[story.category]?.vi || story.category;
+  const catLabel = categoryLabels[story.category]?.vi || story.category.replace(/_/g, ' ');
   const question = story.question_vi || story.question_en;
 
   return (

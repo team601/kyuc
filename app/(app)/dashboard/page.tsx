@@ -8,10 +8,10 @@ export default async function DashboardPage() {
 
   if (!user) redirect('/login');
 
-  // Fetch stories
+  // Fetch stories (only fields required for dashboard cards)
   const { data: stories } = await supabase
     .from('stories')
-    .select('*')
+    .select('id, title, category, created_at, content_text, audio_url, image_url, question_en, question_vi, user_id')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 

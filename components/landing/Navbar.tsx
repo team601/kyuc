@@ -3,17 +3,36 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
+import { createClient } from '@/lib/supabase/client';
 import styles from './Navbar.module.css';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const { lang, setLang, t } = useLanguage();
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handler, { passive: true });
-    return () => window.removeEventListener('scroll', handler);
+
+    try {
+      const supabase = createClient();
+      supabase.auth.getUser().then(({ data }) => {
+        setUser(data?.user ?? null);
+      });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+      });
+
+      return () => {
+        window.removeEventListener('scroll', handler);
+        subscription.unsubscribe();
+      };
+    } catch {
+      return () => window.removeEventListener('scroll', handler);
+    }
   }, []);
 
   return (
@@ -54,13 +73,24 @@ export default function Navbar() {
             </button>
           </div>
 
-          <Link href="/login" className={`btn btn-ghost btn-sm`}>{t.nav.login}</Link>
-          <Link href="/signup" className={`btn btn-primary btn-sm`}>
-            {t.nav.signup}
-            <svg className="arrow-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M2 12L12 2M12 2H5M12 2V9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </Link>
+          {user ? (
+            <Link href="/dashboard" className="btn btn-primary btn-sm">
+              {lang === 'vi' ? 'Bảng điều khiển' : 'Dashboard'}
+              <svg className="arrow-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M2 12L12 2M12 2H5M12 2V9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </Link>
+          ) : (
+            <>
+              <Link href="/login" className="btn btn-ghost btn-sm">{t.nav.login}</Link>
+              <Link href="/signup" className="btn btn-primary btn-sm">
+                {t.nav.signup}
+                <svg className="arrow-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M2 12L12 2M12 2H5M12 2V9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile hamburger */}
@@ -98,8 +128,16 @@ export default function Navbar() {
             </button>
           </div>
           <div className={styles.mobileActions}>
-            <Link href="/login" className="btn btn-ghost">{t.nav.login}</Link>
-            <Link href="/signup" className="btn btn-primary">{t.nav.startNow}</Link>
+            {user ? (
+              <Link href="/dashboard" className="btn btn-primary" onClick={() => setMenuOpen(false)}>
+                {lang === 'vi' ? 'Vào Bảng điều khiển →' : 'Go to Dashboard →'}
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="btn btn-ghost" onClick={() => setMenuOpen(false)}>{t.nav.login}</Link>
+                <Link href="/signup" className="btn btn-primary" onClick={() => setMenuOpen(false)}>{t.nav.startNow}</Link>
+              </>
+            )}
           </div>
         </div>
       )}

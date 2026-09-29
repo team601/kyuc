@@ -44,7 +44,7 @@ export function StoryDetailClient({ story }: StoryDetailClientProps) {
     life_lessons: { en: 'Life Lessons', vi: 'Bài Học Cuộc Đời' },
   };
 
-  const catLabel = categoryLabels[story.category]?.[lang] || story.category;
+  const catLabel = categoryLabels[story.category]?.[lang] || story.category.replace(/_/g, ' ');
   const question = lang === 'vi'
     ? (story.question_vi || story.question_en)
     : (story.question_en || story.question_vi);

@@ -7,6 +7,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { backendTranslations } from '@/lib/translations';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { createClient } from '@/lib/supabase/client';
+import PhotoUploader from '@/components/story/PhotoUploader';
 import styles from './edit.module.css';
 
 interface Story {
@@ -31,6 +32,8 @@ export function StoryEditClient({ story }: { story: Story }) {
   const [contentText, setContentText] = useState(story.content_text || '');
   const [photoCaption, setPhotoCaption] = useState(story.photo_caption || '');
   const [imageUrl, setImageUrl] = useState(story.image_url || '');
+  const [newPhotoFile, setNewPhotoFile] = useState<File | null>(null);
+  const [photoRemoved, setPhotoRemoved] = useState(false);
   const [audioTranscript, setAudioTranscript] = useState(story.audio_transcript || '');
 
   const [saving, setSaving] = useState(false);
@@ -88,6 +91,25 @@ export function StoryEditClient({ story }: { story: Story }) {
 
     try {
       const supabase = createClient();
+
+      let finalImageUrl = imageUrl || null;
+
+      // Upload new photo if user selected one
+      if (newPhotoFile) {
+        const ext = newPhotoFile.name.split('.').pop() || 'webp';
+        const photoPath = `${story.user_id}/${Date.now()}.${ext}`;
+        const { data: photoData, error: photoError } = await supabase.storage
+          .from('photos')
+          .upload(photoPath, newPhotoFile, { contentType: newPhotoFile.type });
+
+        if (!photoError && photoData) {
+          const { data: urlData } = supabase.storage.from('photos').getPublicUrl(photoData.path);
+          finalImageUrl = urlData.publicUrl;
+        }
+      } else if (photoRemoved) {
+        finalImageUrl = null;
+      }
+
       const { error } = await supabase
         .from('stories')
         .update({
@@ -95,7 +117,7 @@ export function StoryEditClient({ story }: { story: Story }) {
           category,
           content_text: contentText.trim() || null,
           photo_caption: photoCaption.trim() || null,
-          image_url: imageUrl || null,
+          image_url: finalImageUrl,
           audio_transcript: audioTranscript.trim() || null,
           updated_at: new Date().toISOString(),
         })
@@ -194,30 +216,26 @@ export function StoryEditClient({ story }: { story: Story }) {
           </div>
 
           {/* Photo */}
-          {imageUrl && (
-            <div className={styles.fieldGroup}>
-              <label className={styles.label}>
-                {lang === 'vi' ? 'Ảnh kỷ niệm' : 'Cherished Photo'}
-              </label>
-              <div className={styles.previewPhoto}>
-                <img src={imageUrl} alt="Story photo" />
-                <button
-                  type="button"
-                  onClick={() => setImageUrl('')}
-                  className={styles.removePhotoBtn}
-                >
-                  ✕ {lang === 'vi' ? 'Gỡ ảnh' : 'Remove photo'}
-                </button>
-              </div>
-              <input
-                type="text"
-                value={photoCaption}
-                onChange={e => setPhotoCaption(e.target.value)}
-                placeholder={lang === 'vi' ? 'Chú thích cho bức ảnh...' : 'Photo caption...'}
-                className={styles.input}
-              />
-            </div>
-          )}
+          <div className={styles.fieldGroup}>
+            <label className={styles.label}>
+              {lang === 'vi' ? 'Ảnh kỷ niệm' : 'Cherished Photo'}
+            </label>
+            <PhotoUploader
+              initialPreview={imageUrl || undefined}
+              onPhotoSelected={(file) => {
+                if (file) {
+                  setNewPhotoFile(file);
+                  setPhotoRemoved(false);
+                } else {
+                  setNewPhotoFile(null);
+                  setPhotoRemoved(true);
+                  setImageUrl('');
+                }
+              }}
+              caption={photoCaption}
+              onCaptionChange={setPhotoCaption}
+            />
+          </div>
 
           {/* Audio Transcript */}
           <div className={styles.fieldGroup}>

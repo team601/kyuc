@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { backendTranslations } from '@/lib/translations';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
+import { categoryMeta, type Category } from '@/lib/questions';
 import styles from './dashboard.module.css';
 
 interface Story {
@@ -292,7 +293,9 @@ export function DashboardClient({ userId, displayName, userEmail, stories }: Das
                   </div>
                 )}
                 <div className={styles.storyMeta}>
-                  <span className={styles.storyCategory}>{story.category}</span>
+                  <span className={styles.storyCategory}>
+                    {categoryMeta[story.category as Category]?.label[lang] || story.category.replace(/_/g, ' ')}
+                  </span>
                   <span className={styles.storyDate}>
                     {new Date(story.created_at).toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', {
                       month: 'short',
