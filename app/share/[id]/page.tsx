@@ -32,7 +32,7 @@ export default async function PublicSharePage({
     .eq('id', id)
     .single();
 
-  if (error || !story) {
+  if (error || !story || !story.is_public) {
     notFound();
   }
 

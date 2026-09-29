@@ -1,6 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { backendTranslations } from '@/lib/translations';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
@@ -19,15 +22,65 @@ interface Story {
   user_id: string;
 }
 
+interface PendingDraft {
+  category: string;
+  questionEn: string;
+  questionVi: string;
+  text: string;
+  savedAt: number;
+}
+
 interface DashboardClientProps {
+  userId: string;
   displayName: string;
   userEmail: string;
   stories: Story[] | null;
 }
 
-export function DashboardClient({ displayName, userEmail, stories }: DashboardClientProps) {
+export function DashboardClient({ userId, displayName, userEmail, stories }: DashboardClientProps) {
+  const router = useRouter();
   const { lang } = useLanguage();
   const bt = backendTranslations[lang];
+
+  const [pendingDraft, setPendingDraft] = useState<PendingDraft | null>(null);
+  const [claimingDraft, setClaimingDraft] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('kyuc_pending_draft');
+      if (stored) {
+        const parsed = JSON.parse(stored) as PendingDraft;
+        setPendingDraft(parsed);
+      }
+    } catch {}
+  }, []);
+
+  const handleClaimDraft = async () => {
+    if (!pendingDraft) return;
+    setClaimingDraft(true);
+    try {
+      const supabase = createClient();
+      const title = (lang === 'vi' ? pendingDraft.questionVi : pendingDraft.questionEn).slice(0, 60);
+      const { error } = await supabase.from('stories').insert({
+        user_id: userId,
+        title,
+        category: pendingDraft.category || 'roots',
+        question_en: pendingDraft.questionEn,
+        question_vi: pendingDraft.questionVi,
+        content_text: pendingDraft.text || '',
+      });
+
+      if (!error) {
+        localStorage.removeItem('kyuc_pending_draft');
+        setPendingDraft(null);
+        router.refresh();
+      }
+    } catch {
+      // ignore
+    } finally {
+      setClaimingDraft(false);
+    }
+  };
 
   const audioCount = stories?.filter(s => s.audio_url).length ?? 0;
 
@@ -144,6 +197,59 @@ export function DashboardClient({ displayName, userEmail, stories }: DashboardCl
             </form>
           </div>
         </div>
+
+        {/* Pending Pre-signup Draft Recovery Card */}
+        {pendingDraft && (
+          <div style={{
+            background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
+            border: '1px solid #FDBA74',
+            borderRadius: 'var(--radius-xl)',
+            padding: '1.25rem 1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            marginBottom: '1.5rem',
+            flexWrap: 'wrap',
+          }}>
+            <div>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#C2410C', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span>✨</span> {lang === 'vi' ? 'Bạn có một ký ức chưa lưu từ trang chủ!' : 'You have an unsaved memory from the homepage!'}
+              </h3>
+              <p style={{ fontSize: '0.875rem', color: '#9A3412', marginTop: '0.25rem' }}>
+                &ldquo;{lang === 'vi' ? pendingDraft.questionVi : pendingDraft.questionEn}&rdquo;
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <button
+                onClick={handleClaimDraft}
+                disabled={claimingDraft}
+                className="btn btn-primary"
+                style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+              >
+                {claimingDraft
+                  ? (lang === 'vi' ? 'Đang lưu…' : 'Saving…')
+                  : (lang === 'vi' ? 'Lưu vào tài khoản ngay' : 'Save to archive now')}
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('kyuc_pending_draft');
+                  setPendingDraft(null);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#9A3412',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  padding: '0.5rem',
+                }}
+              >
+                {lang === 'vi' ? 'Bỏ qua' : 'Dismiss'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Stats */}
         <div className={styles.stats}>

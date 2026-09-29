@@ -19,6 +19,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardClient
+      userId={user.id}
       displayName={displayName}
       userEmail={user.email ?? ''}
       stories={stories}

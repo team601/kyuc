@@ -21,15 +21,20 @@ export default function Footer() {
           <p className={styles.tagline}>{t.footer.tagline}</p>
         </div>
 
-        {/* Center */}
-        <p className={styles.center}>
-          {t.footer.bilingual}
-        </p>
+        {/* Center / Legal Links */}
+        <div className={styles.legalLinks}>
+          <Link href="/privacy" className={styles.legalLink}>{t.footer.privacy}</Link>
+          <span className={styles.dot}>·</span>
+          <Link href="/terms" className={styles.legalLink}>{t.footer.terms}</Link>
+          <span className={styles.dot}>·</span>
+          <Link href="/security" className={styles.legalLink}>{t.footer.security}</Link>
+        </div>
 
-        {/* Right */}
-        <p className={styles.right}>
-          {t.footer.copyright}
-        </p>
+        {/* Right: Bilingual & Copyright */}
+        <div className={styles.rightGroup}>
+          <p className={styles.center}>{t.footer.bilingual}</p>
+          <p className={styles.right}>{t.footer.copyright}</p>
+        </div>
       </div>
     </footer>
   );

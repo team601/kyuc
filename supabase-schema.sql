@@ -103,10 +103,10 @@ create policy "Users can manage own family invites"
 
 -- ─────────────────────────────────────────────────────────────
 
--- 4. Storage bucket for audio files
+-- 4. Storage bucket for audio files (Private by default)
 insert into storage.buckets (id, name, public) 
-values ('audio', 'audio', true)
-on conflict (id) do update set public = true;
+values ('audio', 'audio', false)
+on conflict (id) do update set public = false;
 
 -- Allow authenticated users to upload to their own folder
 drop policy if exists "Authenticated users can upload audio" on storage.objects;
@@ -115,10 +115,22 @@ create policy "Authenticated users can upload audio"
   to authenticated
   with check (bucket_id = 'audio' and auth.uid()::text = (storage.foldername(name))[1]);
 
+-- Audio files: readable by owner or if story is marked public
 drop policy if exists "Audio files are publicly readable" on storage.objects;
-create policy "Audio files are publicly readable"
+drop policy if exists "Users can read own audio or public stories" on storage.objects;
+create policy "Users can read own audio or public stories"
   on storage.objects for select
-  using (bucket_id = 'audio');
+  using (
+    bucket_id = 'audio' 
+    and (
+      auth.uid()::text = (storage.foldername(name))[1]
+      or exists (
+        select 1 from public.stories s 
+        where s.audio_url like '%' || name 
+        and s.is_public = true
+      )
+    )
+  );
 
 drop policy if exists "Users can delete own audio" on storage.objects;
 create policy "Users can delete own audio"
@@ -128,10 +140,10 @@ create policy "Users can delete own audio"
 
 -- ─────────────────────────────────────────────────────────────
 
--- 5. Storage bucket for story photos
+-- 5. Storage bucket for story photos (Private by default)
 insert into storage.buckets (id, name, public) 
-values ('photos', 'photos', true)
-on conflict (id) do update set public = true;
+values ('photos', 'photos', false)
+on conflict (id) do update set public = false;
 
 drop policy if exists "Authenticated users can upload photos" on storage.objects;
 create policy "Authenticated users can upload photos"
@@ -139,10 +151,22 @@ create policy "Authenticated users can upload photos"
   to authenticated
   with check (bucket_id = 'photos' and auth.uid()::text = (storage.foldername(name))[1]);
 
+-- Photos: readable by owner or if story is marked public
 drop policy if exists "Photos are publicly readable" on storage.objects;
-create policy "Photos are publicly readable"
+drop policy if exists "Users can read own photos or public stories" on storage.objects;
+create policy "Users can read own photos or public stories"
   on storage.objects for select
-  using (bucket_id = 'photos');
+  using (
+    bucket_id = 'photos' 
+    and (
+      auth.uid()::text = (storage.foldername(name))[1]
+      or exists (
+        select 1 from public.stories s 
+        where s.image_url like '%' || name 
+        and s.is_public = true
+      )
+    )
+  );
 
 drop policy if exists "Users can delete own photos" on storage.objects;
 create policy "Users can delete own photos"

@@ -59,7 +59,10 @@ function NewStoryContent() {
     return `${m}:${s}`;
   };
 
+  const [micError, setMicError] = useState<string | null>(null);
+
   const startRecording = useCallback(async () => {
+    setMicError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
@@ -110,9 +113,9 @@ function NewStoryContent() {
         }
       }
     } catch {
-      alert(lang === 'vi'
-        ? 'Không thể truy cập micro. Vui lòng kiểm tra quyền trình duyệt.'
-        : 'Could not access microphone. Please check browser permissions.');
+      setMicError(lang === 'vi'
+        ? 'Trình duyệt chưa cho phép truy cập micro. Hãy bấm vào biểu tượng ổ khóa cạnh thanh địa chỉ để bật lại quyền, hoặc chuyển sang viết trực tiếp câu chuyện bên dưới.'
+        : 'Microphone access is blocked. Please check your browser address bar permissions or write your story directly in the text box.');
     }
   }, [lang]);
 
@@ -147,6 +150,11 @@ function NewStoryContent() {
 
     // Upload audio if exists
     if (audioBlob) {
+      if (audioBlob.size > 50 * 1024 * 1024) {
+        alert(lang === 'vi' ? 'Bản ghi âm vượt quá dung lượng tối đa (50MB).' : 'Audio recording exceeds the 50MB limit.');
+        setSaving(false);
+        return;
+      }
       const fileName = `${user.id}/${Date.now()}.webm`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('audio')
@@ -301,8 +309,9 @@ function NewStoryContent() {
 
               {/* Text */}
               <div>
-                <label className="form-label">{bt.newStory.stepRecord.storyLabel}</label>
+                <label className="form-label" htmlFor="story-text-input">{bt.newStory.stepRecord.storyLabel}</label>
                 <textarea
+                  id="story-text-input"
                   className="form-textarea"
                   placeholder={bt.newStory.stepRecord.storyPlaceholder}
                   value={storyText}
@@ -317,6 +326,43 @@ function NewStoryContent() {
                 caption={photoCaption}
                 onCaptionChange={setPhotoCaption}
               />
+
+              {/* Mic permission error guidance */}
+              {micError && (
+                <div style={{
+                  background: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.85rem 1rem',
+                  color: '#991B1B',
+                  fontSize: 'var(--text-sm)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                  lineHeight: 1.5,
+                }}>
+                  <span>⚠️ {micError}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      document.getElementById('story-text-input')?.focus();
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--color-brand)',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      padding: 0,
+                      textDecoration: 'underline',
+                      fontSize: 'var(--text-sm)',
+                    }}
+                  >
+                    {lang === 'vi' ? '✍️ Chuyển sang viết câu chuyện vào ô phía trên' : '✍️ Switch to typing your memory instead'}
+                  </button>
+                </div>
+              )}
 
               {/* Record */}
               <div className={styles.recordControls}>

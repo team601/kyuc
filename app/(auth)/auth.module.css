@@ -108,6 +108,23 @@
   gap: var(--space-4);
 }
 
+.passwordHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.forgotLink {
+  font-size: var(--text-xs);
+  color: var(--color-brand);
+  text-decoration: none;
+  font-weight: var(--font-medium);
+}
+
+.forgotLink:hover {
+  text-decoration: underline;
+}
+
 .error {
   background: #fef2f2;
   border: 1px solid #fecaca;

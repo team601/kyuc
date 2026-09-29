@@ -305,6 +305,46 @@
   border: 1px solid #FECACA;
 }
 
+.dangerCard {
+  border: 1px solid #FCA5A5;
+  background: #FFF5F5;
+}
+
+.dangerBtn {
+  background: #DC2626;
+  color: #FFFFFF;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  width: fit-content;
+}
+
+.dangerBtn:hover {
+  background: #B91C1C;
+}
+
+.secondaryBtn {
+  background: var(--color-white);
+  color: var(--color-ink);
+  border: 1px solid var(--color-border);
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  width: fit-content;
+}
+
+.secondaryBtn:hover {
+  background: var(--color-cream);
+  border-color: var(--color-ink-soft);
+}
+
 @media (max-width: 600px) {
   .statsGrid { grid-template-columns: repeat(2, 1fr); }
   .tabBtn { font-size: 0.75rem; padding: 0.5rem 0.25rem; }

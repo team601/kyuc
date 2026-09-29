@@ -16,17 +16,37 @@ const LanguageContext = createContext<LanguageContextType>({
 });
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<Language>('en'); // Default to English since user specifically requested English version
+  const [lang, setLangState] = useState<Language>('en');
 
   useEffect(() => {
-    const saved = localStorage.getItem('kyuc_lang') as Language | null;
-    if (saved === 'en' || saved === 'vi') {
-      setLangState(saved);
+    // Check URL params first (great for crawlers & shared links)
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlLang = urlParams.get('lang') as Language | null;
+      if (urlLang === 'en' || urlLang === 'vi') {
+        setLangState(urlLang);
+        document.documentElement.lang = urlLang;
+        try {
+          localStorage.setItem('kyuc_lang', urlLang);
+        } catch {}
+        return;
+      }
+
+      const saved = localStorage.getItem('kyuc_lang') as Language | null;
+      if (saved === 'en' || saved === 'vi') {
+        setLangState(saved);
+        document.documentElement.lang = saved;
+      } else {
+        document.documentElement.lang = 'en';
+      }
     }
   }, []);
 
   const setLang = (newLang: Language) => {
     setLangState(newLang);
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = newLang;
+    }
     try {
       localStorage.setItem('kyuc_lang', newLang);
     } catch {}

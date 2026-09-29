@@ -43,7 +43,7 @@ export default function HeroSection() {
         <div className={styles.visual}>
           <div className={styles.imageWrap}>
             <Image
-              src="/images/hero-family.jpg"
+              src="/images/hero-family.webp"
               alt={lang === 'vi' ? 'Bà và cháu cùng xem lại ảnh gia đình' : 'Family sharing cherished memories'}
               width={680}
               height={520}

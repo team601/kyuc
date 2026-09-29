@@ -51,6 +51,13 @@ export function ProfileClient({
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordMsg, setPasswordMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Data Export & Account Deletion fields
+  const [exporting, setExporting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
   const initial = displayName ? displayName[0].toUpperCase() : 'U';
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,6 +174,65 @@ export function ProfileClient({
       setPasswordMsg({ type: 'error', text: err.message || 'Error updating password' });
     } finally {
       setSavingPassword(false);
+    }
+  };
+
+  const handleExportData = async () => {
+    setExporting(true);
+    try {
+      const supabase = createClient();
+      const { data: storiesData } = await supabase
+        .from('stories')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      const exportPayload = {
+        export_date: new Date().toISOString(),
+        profile: {
+          id: userId,
+          email: userEmail,
+          displayName,
+          createdAt: userCreatedAt,
+        },
+        stories: storiesData || [],
+      };
+
+      const blob = new Blob([JSON.stringify(exportPayload, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `kyuc-memories-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.message || 'Export error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmInput.trim().toUpperCase() !== 'DELETE') {
+      setDeleteError(lang === 'vi' ? 'Vui lòng nhập chính xác từ "DELETE" để xác nhận.' : 'Please type "DELETE" to confirm.');
+      return;
+    }
+
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      const supabase = createClient();
+      await supabase.from('stories').delete().eq('user_id', userId);
+      await supabase.from('family_members').delete().eq('owner_id', userId);
+      await supabase.from('profiles').delete().eq('id', userId);
+      await supabase.auth.signOut();
+      window.location.href = '/login?deleted=true';
+    } catch (err: any) {
+      setDeleteError(err.message || 'Error deleting account');
+      setDeleting(false);
     }
   };
 
@@ -396,6 +462,89 @@ export function ProfileClient({
                     {savingPassword ? bt.profile.saving : bt.profile.changePassword}
                   </button>
                 </form>
+              )}
+            </div>
+
+            {/* Data Export Card */}
+            <div className={styles.settingsCard} style={{ marginTop: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-ink)' }}>
+                {bt.profile.exportData}
+              </h2>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-muted)', lineHeight: 1.5 }}>
+                {bt.profile.exportDesc}
+              </p>
+              <button
+                type="button"
+                onClick={handleExportData}
+                disabled={exporting}
+                className={styles.secondaryBtn}
+              >
+                {exporting
+                  ? (lang === 'vi' ? 'Đang chuẩn bị...' : 'Preparing export...')
+                  : bt.profile.exportBtn}
+              </button>
+            </div>
+
+            {/* Account Deletion Card */}
+            <div className={`${styles.settingsCard} ${styles.dangerCard}`} style={{ marginTop: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#DC2626' }}>
+                {bt.profile.deleteAccount}
+              </h2>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-ink-soft)', lineHeight: 1.5 }}>
+                {bt.profile.deleteDesc}
+              </p>
+
+              {deleteError && (
+                <div className={`${styles.alertBox} ${styles.alertError}`}>
+                  {deleteError}
+                </div>
+              )}
+
+              {showDeleteConfirm ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <p style={{ fontSize: '0.85rem', fontWeight: 600, color: '#991B1B' }}>
+                    {bt.profile.deleteConfirmPrompt}
+                  </p>
+                  <input
+                    type="text"
+                    placeholder="DELETE"
+                    value={deleteConfirmInput}
+                    onChange={e => setDeleteConfirmInput(e.target.value)}
+                    className={styles.formInput}
+                    style={{ maxWidth: '200px' }}
+                  />
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={handleDeleteAccount}
+                      disabled={deleting}
+                      className={styles.dangerBtn}
+                    >
+                      {deleting
+                        ? (lang === 'vi' ? 'Đang xóa...' : 'Deleting...')
+                        : (lang === 'vi' ? 'Xác nhận xóa tài khoản' : 'Confirm Deletion')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowDeleteConfirm(false);
+                        setDeleteConfirmInput('');
+                        setDeleteError('');
+                      }}
+                      className={styles.secondaryBtn}
+                    >
+                      {lang === 'vi' ? 'Hủy' : 'Cancel'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className={styles.dangerBtn}
+                >
+                  {bt.profile.deleteBtn}
+                </button>
               )}
             </div>
           </div>

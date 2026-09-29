@@ -85,6 +85,10 @@ export default function PhotoUploader({
       alert('Please upload an image file (JPG, PNG, WebP).');
       return;
     }
+    if (file.size > 15 * 1024 * 1024) {
+      alert('File size exceeds the 15MB limit. Please choose a smaller photo.');
+      return;
+    }
     const compressed = await compressImage(file);
     const objectUrl = URL.createObjectURL(compressed);
     setPreview(objectUrl);

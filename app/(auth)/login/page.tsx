@@ -4,10 +4,12 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useLanguage } from '@/lib/LanguageContext';
 import styles from '../auth.module.css';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { lang } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -94,7 +96,14 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="form-label" htmlFor="login-password">Password</label>
+            <div className={styles.passwordHeader}>
+              <label className="form-label" htmlFor="login-password">
+                {lang === 'vi' ? 'Mật khẩu' : 'Password'}
+              </label>
+              <Link href="/forgot-password" className={styles.forgotLink}>
+                {lang === 'vi' ? 'Quên mật khẩu?' : 'Forgot password?'}
+              </Link>
+            </div>
             <input
               id="login-password"
               type="password"

@@ -42,6 +42,33 @@
   color: var(--color-subtle);
 }
 
+.legalLinks {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.legalLink {
+  color: var(--color-muted);
+  transition: color var(--transition-fast);
+}
+
+.legalLink:hover {
+  color: var(--color-brand);
+}
+
+.dot {
+  color: var(--color-border);
+}
+
+.rightGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+
 .center {
   font-size: var(--text-sm);
   color: var(--color-muted);
@@ -57,5 +84,14 @@
     flex-direction: column;
     text-align: center;
     gap: var(--space-4);
+  }
+
+  .rightGroup {
+    align-items: center;
+  }
+
+  .legalLinks {
+    flex-wrap: wrap;
+    justify-content: center;
   }
 }

@@ -104,6 +104,20 @@ export default function QuestionDemo() {
     a.click();
   };
 
+  const handleSaveToAccount = () => {
+    try {
+      const draft = {
+        category,
+        questionEn: question.en,
+        questionVi: question.vi,
+        text: storyText,
+        savedAt: Date.now(),
+      };
+      localStorage.setItem('kyuc_pending_draft', JSON.stringify(draft));
+      window.location.href = '/signup';
+    } catch {}
+  };
+
   const currentCategory = categoryMeta[category];
 
   return (
@@ -243,6 +257,21 @@ export default function QuestionDemo() {
                     <path d="M7 2v7M4 6l3 3 3-3M2 11h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
                   </svg>
                   {lang === 'vi' ? 'Tải câu chuyện văn bản' : 'Download text story'}
+                </button>
+              )}
+              {(storyText.trim() || audioBlob) && (
+                <button
+                  onClick={handleSaveToAccount}
+                  className={styles.downloadLink}
+                  style={{
+                    background: 'var(--color-brand)',
+                    color: 'white',
+                    borderColor: 'var(--color-brand)',
+                    fontWeight: 600,
+                  }}
+                >
+                  <span>✨</span>
+                  {lang === 'vi' ? 'Lưu vào tài khoản gia đình' : 'Save to family archive'}
                 </button>
               )}
             </div>
