@@ -7,12 +7,24 @@ export default async function ProfilePage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
+  // Fetch stories count
   const { data: stories } = await supabase
     .from('stories')
     .select('id, category, created_at')
     .eq('user_id', user.id);
 
-  const displayName = user.user_metadata?.display_name || user.email?.split('@')[0] || 'Friend';
+  // Fetch profile
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('avatar_url, display_name, language_pref')
+    .eq('id', user.id)
+    .single();
+
+  const isGoogleUser = user.app_metadata?.provider === 'google' ||
+    user.identities?.some(id => id.provider === 'google') || false;
+
+  const displayName = profile?.display_name || user.user_metadata?.display_name || user.email?.split('@')[0] || 'Friend';
+  const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url || null;
 
   const categoryCounts = {
     roots: stories?.filter(s => s.category === 'roots').length ?? 0,
@@ -22,11 +34,14 @@ export default async function ProfilePage() {
 
   return (
     <ProfileClient
-      displayName={displayName}
+      userId={user.id}
+      initialDisplayName={displayName}
+      initialAvatarUrl={avatarUrl}
       userEmail={user.email ?? ''}
       userCreatedAt={user.created_at}
       categoryCounts={categoryCounts}
       totalStories={stories?.length ?? 0}
+      isGoogleUser={isGoogleUser}
     />
   );
 }

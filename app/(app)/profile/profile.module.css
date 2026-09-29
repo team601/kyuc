@@ -37,20 +37,57 @@
 }
 
 .main {
-  max-width: 600px;
+  max-width: 640px;
   margin: 0 auto;
-  padding: var(--space-16) var(--space-8);
+  padding: 3rem 1.5rem 6rem;
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
+  gap: 2rem;
   align-items: center;
+}
+
+/* Tabs */
+.tabNav {
+  display: flex;
+  background: #ECE5DB;
+  padding: 0.35rem;
+  border-radius: var(--radius-lg, 0.75rem);
+  width: 100%;
+  gap: 0.25rem;
+}
+
+.tabBtn {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border: none;
+  background: transparent;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  border-radius: var(--radius-md, 0.5rem);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.tabBtnActive {
+  background: white;
+  color: var(--color-ink);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.tabContent {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .profileCard {
   background: var(--color-white);
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-2xl);
-  padding: var(--space-10);
+  padding: var(--space-8);
   width: 100%;
   text-align: center;
   box-shadow: var(--shadow-sm);
@@ -61,17 +98,55 @@
 }
 
 .avatar {
-  width: 72px;
-  height: 72px;
+  width: 80px;
+  height: 80px;
   background: var(--color-brand);
   color: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--text-3xl);
+  font-size: 2rem;
   font-weight: var(--font-bold);
   margin-bottom: var(--space-2);
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(232, 80, 58, 0.25);
+  border: 3px solid white;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarUploadArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.avatarInputLabel {
+  background: white;
+  border: 1px solid var(--color-border);
+  padding: 0.45rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.avatarInputLabel:hover {
+  background: var(--color-warm-beige);
+  border-color: #D1C7BA;
+}
+
+.avatarInputHidden {
+  display: none;
 }
 
 .name {
@@ -132,6 +207,105 @@
   justify-content: center;
 }
 
+/* Settings Card & Form */
+.settingsCard {
+  background: white;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-2xl);
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.formLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.formInput {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: border-color 0.15s ease;
+  font-family: inherit;
+}
+
+.formInput:focus {
+  border-color: var(--color-brand);
+}
+
+.disabledInput {
+  background: #F9FAFB;
+  color: #6B7280;
+  cursor: not-allowed;
+}
+
+.saveBtn {
+  background: var(--color-brand);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  align-self: flex-start;
+}
+
+.saveBtn:hover:not(:disabled) {
+  background: #D43E29;
+}
+
+.saveBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.oauthBanner {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #1E40AF;
+  padding: 1.25rem;
+  border-radius: var(--radius-lg);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  line-height: 1.5;
+}
+
+.alertBox {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+}
+
+.alertSuccess {
+  background: #F0FDF4;
+  color: #166534;
+  border: 1px solid #BBF7D0;
+}
+
+.alertError {
+  background: #FEF2F2;
+  color: #991B1B;
+  border: 1px solid #FECACA;
+}
+
 @media (max-width: 600px) {
   .statsGrid { grid-template-columns: repeat(2, 1fr); }
+  .tabBtn { font-size: 0.75rem; padding: 0.5rem 0.25rem; }
 }

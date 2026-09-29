@@ -149,3 +149,59 @@ create policy "Users can delete own photos"
   on storage.objects for delete
   to authenticated
   using (bucket_id = 'photos' and auth.uid()::text = (storage.foldername(name))[1]);
+
+-- ─────────────────────────────────────────────────────────────
+
+-- 6. Storage bucket for user avatars
+insert into storage.buckets (id, name, public) 
+values ('avatars', 'avatars', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "Authenticated users can upload avatars" on storage.objects;
+create policy "Authenticated users can upload avatars"
+  on storage.objects for insert
+  to authenticated
+  with check (bucket_id = 'avatars' and auth.uid()::text = (storage.foldername(name))[1]);
+
+drop policy if exists "Avatars are publicly readable" on storage.objects;
+create policy "Avatars are publicly readable"
+  on storage.objects for select
+  using (bucket_id = 'avatars');
+
+drop policy if exists "Users can update/delete own avatars" on storage.objects;
+create policy "Users can update/delete own avatars"
+  on storage.objects for delete
+  to authenticated
+  using (bucket_id = 'avatars' and auth.uid()::text = (storage.foldername(name))[1]);
+
+-- ─────────────────────────────────────────────────────────────
+
+-- 7. Story columns for transcript & sharing
+alter table public.stories add column if not exists audio_transcript text;
+alter table public.stories add column if not exists is_public boolean default false;
+alter table public.stories add column if not exists share_token uuid default gen_random_uuid();
+
+-- Allow public viewing if is_public = true
+drop policy if exists "Allow viewing public stories" on public.stories;
+create policy "Allow viewing public stories"
+  on public.stories for select
+  using (is_public = true);
+
+-- Allow invited family members to view family members table
+drop policy if exists "Users can view family invites for their email or by owner" on public.family_members;
+create policy "Users can view family invites for their email or by owner"
+  on public.family_members for select
+  using (
+    auth.uid() = owner_id or 
+    member_email = (select email from auth.users where id = auth.uid()) or
+    member_id = auth.uid()
+  );
+
+drop policy if exists "Invited members can update their invitation status" on public.family_members;
+create policy "Invited members can update their invitation status"
+  on public.family_members for update
+  using (
+    member_email = (select email from auth.users where id = auth.uid()) or
+    member_id = auth.uid()
+  );
+

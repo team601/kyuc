@@ -29,10 +29,12 @@ function NewStoryContent() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoCaption, setPhotoCaption] = useState('');
+  const [audioTranscript, setAudioTranscript] = useState('');
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState<'category' | 'record' | 'save'>('category');
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recognitionRef = useRef<any>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -45,6 +47,7 @@ function NewStoryContent() {
   const handleNextQuestion = () => {
     setQuestion(getRandomQuestion(category));
     setStoryText('');
+    setAudioTranscript('');
     setAudioBlob(null);
     setAudioUrl(null);
     setRecordingTime(0);
@@ -77,6 +80,35 @@ function NewStoryContent() {
       setIsRecording(true);
       setRecordingTime(0);
       timerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
+
+      // Web Speech API real-time transcription
+      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        try {
+          const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+          const recognition = new SpeechRecognition();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = lang === 'vi' ? 'vi-VN' : 'en-US';
+
+          recognition.onresult = (event: any) => {
+            let transcriptText = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+              if (event.results[i].isFinal) {
+                transcriptText += event.results[i][0].transcript + ' ';
+              }
+            }
+            if (transcriptText) {
+              setAudioTranscript(prev => (prev ? prev + ' ' : '') + transcriptText.trim());
+            }
+          };
+
+          recognition.onerror = () => {};
+          recognition.start();
+          recognitionRef.current = recognition;
+        } catch {
+          // ignore speech recognition error
+        }
+      }
     } catch {
       alert(lang === 'vi'
         ? 'Không thể truy cập micro. Vui lòng kiểm tra quyền trình duyệt.'
@@ -89,6 +121,12 @@ function NewStoryContent() {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       if (timerRef.current) clearInterval(timerRef.current);
+    }
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+      recognitionRef.current = null;
     }
   }, [isRecording]);
 
@@ -141,6 +179,7 @@ function NewStoryContent() {
       category,
       content_text: storyText,
       audio_url,
+      audio_transcript: audioTranscript.trim() || null,
       image_url,
       photo_caption: photoCaption || null,
       language: lang,
@@ -298,6 +337,38 @@ function NewStoryContent() {
 
               {audioUrl && (
                 <audio controls src={audioUrl} style={{ width: '100%', marginTop: '0.5rem' }} />
+              )}
+
+              {/* Voice Transcript */}
+              {(isRecording || audioTranscript || audioUrl) && (
+                <div style={{
+                  background: '#FFFBF7',
+                  border: '1px solid #F3E7DC',
+                  borderRadius: 'var(--radius-lg, 0.75rem)',
+                  padding: '1rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#8C4325', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span>📝</span> {bt.story.audioTranscript}
+                    </span>
+                    {isRecording && (
+                      <span style={{ fontSize: '0.75rem', color: '#DC2626', fontWeight: 600 }}>
+                        {bt.story.speechToTextActive}
+                      </span>
+                    )}
+                  </div>
+                  <textarea
+                    rows={3}
+                    className="form-textarea"
+                    value={audioTranscript}
+                    onChange={e => setAudioTranscript(e.target.value)}
+                    placeholder={lang === 'vi' ? 'Bản chép lời giọng nói sẽ hiển thị tại đây khi ghi âm...' : 'Speech-to-text transcript will appear here while recording...'}
+                    style={{ fontSize: '0.9rem', lineHeight: 1.6 }}
+                  />
+                </div>
               )}
 
               <button

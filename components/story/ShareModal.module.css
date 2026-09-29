@@ -1,0 +1,189 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal {
+  background: #ffffff;
+  border-radius: var(--radius-2xl, 1.25rem);
+  width: 100%;
+  max-width: 480px;
+  padding: 2rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  animation: slideUp 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-ink, #1F1E1D);
+  margin-bottom: 0.35rem;
+}
+
+.desc {
+  font-size: 0.875rem;
+  color: var(--color-muted, #736F6E);
+  line-height: 1.5;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--color-muted, #736F6E);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  transition: all 0.15s ease;
+}
+
+.closeBtn:hover {
+  background: var(--color-warm-beige, #F4EFEA);
+  color: var(--color-ink, #1F1E1D);
+}
+
+.linkBox {
+  display: flex;
+  gap: 0.5rem;
+  background: var(--color-cream, #FAF7F2);
+  border: 1px solid var(--color-border, #E5DFD7);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-lg, 0.75rem);
+  align-items: center;
+}
+
+.linkInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 0.85rem;
+  color: var(--color-ink, #1F1E1D);
+  outline: none;
+  text-overflow: ellipsis;
+  font-family: inherit;
+}
+
+.copyBtn {
+  background: var(--color-brand, #E8503A);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md, 0.5rem);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.copyBtn:hover {
+  background: #D43E29;
+}
+
+.copyBtn.copied {
+  background: #16A34A;
+}
+
+.publicBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-muted, #736F6E);
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  color: #166534;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md, 0.5rem);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.socialRow {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.socialBtn {
+  flex: 1;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-md, 0.5rem);
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid var(--color-border, #E5DFD7);
+  background: white;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--color-ink, #1F1E1D);
+  transition: all 0.15s ease;
+}
+
+.socialBtn:hover {
+  background: var(--color-warm-beige, #F4EFEA);
+  border-color: #D1C7BA;
+}
+
+.nativeShareBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--color-ink, #1F1E1D);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md, 0.5rem);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.nativeShareBtn:hover {
+  background: #33312E;
+}
