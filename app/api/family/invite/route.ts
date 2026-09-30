@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       inviterName,
       inviterRole: role || null,
       inviteId: createdMember.id,
-      lang: body.lang === 'en' ? 'en' : 'vi',
+      lang: body.lang === 'vi' ? 'vi' : 'en',
     });
 
     return NextResponse.json({
