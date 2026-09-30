@@ -29,6 +29,13 @@ export default async function FamilyPage() {
     avatarUrl: profile?.avatar_url || user.user_metadata?.avatar_url || null,
   };
 
+  // Auto-link any invitations to member_id if missing
+  await supabase
+    .from('family_members')
+    .update({ member_id: user.id })
+    .ilike('member_email', userEmail)
+    .is('member_id', null);
+
   // 2. Fetch members invited by current user (I am owner)
   const { data: myInvites } = await supabase
     .from('family_members')
@@ -40,23 +47,24 @@ export default async function FamilyPage() {
   const { data: joinedCircles } = await supabase
     .from('family_members')
     .select('*')
-    .or(`member_email.eq.${userEmail},member_id.eq.${user.id}`)
+    .or(`member_email.ilike.${userEmail},member_id.eq.${user.id}`)
     .eq('status', 'accepted');
 
   // 4. Fetch incoming pending invitations for current user
-  const { data: pendingInvites } = await supabase
+  const { data: rawPendingInvites } = await supabase
     .from('family_members')
     .select('*')
-    .or(`member_email.eq.${userEmail},member_id.eq.${user.id}`)
+    .or(`member_email.ilike.${userEmail},member_id.eq.${user.id}`)
     .eq('status', 'pending');
 
   // 5. Gather all connected user IDs to fetch profiles and stories
   const ownerIds = (joinedCircles || []).map(c => c.owner_id).filter(Boolean);
+  const pendingOwnerIds = (rawPendingInvites || []).map(p => p.owner_id).filter(Boolean);
   const acceptedMemberIds = (myInvites || [])
     .filter(m => m.status === 'accepted' && m.member_id)
     .map(m => m.member_id as string);
 
-  const profileIdsToFetch = Array.from(new Set([...ownerIds, ...acceptedMemberIds]));
+  const profileIdsToFetch = Array.from(new Set([...ownerIds, ...pendingOwnerIds, ...acceptedMemberIds]));
 
   let profileMap: Record<string, { display_name: string | null; avatar_url: string | null }> = {};
   if (profileIdsToFetch.length > 0) {
@@ -118,21 +126,33 @@ export default async function FamilyPage() {
     });
   }
 
+  const enrichedPendingInvites = (rawPendingInvites || []).map(inv => ({
+    ...inv,
+    inviterName: profileMap[inv.owner_id]?.display_name || 'Người thân',
+  }));
+
   // 7. Fetch family stories for current user + all connected family members
   const connectedUserIds = Array.from(new Set([user.id, ...ownerIds, ...acceptedMemberIds]));
 
-  const { data: stories } = await supabase
+  const { data: rawStories } = await supabase
     .from('stories')
-    .select('id, title, category, created_at, content_text, audio_url, image_url')
+    .select('id, title, category, created_at, content_text, audio_url, image_url, user_id, visibility, is_public')
     .in('user_id', connectedUserIds)
     .order('created_at', { ascending: false });
+
+  // Filter out any other user's private stories
+  const visibleStories = (rawStories || []).filter(s => {
+    if (s.user_id === user.id) return true;
+    return s.visibility !== 'private' || s.is_public === true;
+  });
 
   return (
     <FamilyClient
       currentUser={currentUser}
       initialMembers={combinedMembers}
-      initialPendingInvites={pendingInvites || []}
-      familyStories={stories || []}
+      initialPendingInvites={enrichedPendingInvites}
+      familyStories={visibleStories}
     />
   );
 }
+

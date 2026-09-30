@@ -58,3 +58,64 @@ export async function PATCH(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const memberId = searchParams.get('id');
+
+    if (!memberId) {
+      return NextResponse.json({ error: 'Missing member ID' }, { status: 400 });
+    }
+
+    // Check membership and authorization
+    const { data: member, error: fetchError } = await supabase
+      .from('family_members')
+      .select('id, owner_id, member_id, member_email')
+      .eq('id', memberId)
+      .single();
+
+    if (fetchError || !member) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+    }
+
+    const isHost = member.owner_id === user.id;
+    const isSelf =
+      member.member_id === user.id ||
+      member.member_email.toLowerCase() === (user.email || '').toLowerCase();
+
+    if (!isHost && !isSelf) {
+      return NextResponse.json(
+        { error: 'You are not authorized to remove this family member' },
+        { status: 403 }
+      );
+    }
+
+    const { error: deleteError } = await supabase
+      .from('family_members')
+      .delete()
+      .eq('id', memberId);
+
+    if (deleteError) {
+      return NextResponse.json({ error: deleteError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, removedId: memberId });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err.message || 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+

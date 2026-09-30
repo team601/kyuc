@@ -240,12 +240,12 @@ create policy "Family members can view each other's stories"
     auth.uid() = user_id or
     is_public = true or
     (
-      visibility = 'family' and exists (
+      coalesce(visibility, 'family') in ('family', 'public') and exists (
         select 1 from public.family_members fm
         where fm.status = 'accepted'
         and (
-          (fm.owner_id = auth.uid() and fm.member_id = stories.user_id) or
-          (fm.owner_id = stories.user_id and (fm.member_id = auth.uid() or fm.member_email = (auth.jwt() ->> 'email')))
+          (fm.owner_id = auth.uid() and (fm.member_id = stories.user_id or lower(fm.member_email) = lower(auth.jwt() ->> 'email'))) or
+          (fm.owner_id = stories.user_id and (fm.member_id = auth.uid() or lower(fm.member_email) = lower(auth.jwt() ->> 'email')))
         )
       )
     )
@@ -258,6 +258,7 @@ alter table public.family_members add column if not exists custom_name text;
 alter table public.family_members add column if not exists custom_avatar_url text;
 
 alter table public.stories add column if not exists visibility text default 'family';
+update public.stories set visibility = 'family' where visibility is null;
 
 -- Fast indexing for story dashboard and feeds
 create index if not exists idx_stories_user_id_created on public.stories(user_id, created_at desc);

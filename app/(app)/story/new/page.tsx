@@ -232,6 +232,7 @@ function NewStoryContent() {
       image_url,
       photo_caption: photoCaption || null,
       language: lang,
+      visibility: 'family',
     }).select().single();
 
     if (error) {

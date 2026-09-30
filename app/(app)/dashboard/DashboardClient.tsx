@@ -21,6 +21,11 @@ interface Story {
   question_en?: string | null;
   question_vi?: string | null;
   user_id: string;
+  is_public?: boolean;
+  visibility?: string | null;
+  authorName?: string;
+  authorRole?: string;
+  isFamilyStory?: boolean;
 }
 
 interface PendingDraft {
@@ -36,13 +41,15 @@ interface DashboardClientProps {
   displayName: string;
   userEmail: string;
   stories: Story[] | null;
+  familyMemberCount?: number;
 }
 
-export function DashboardClient({ userId, displayName, userEmail, stories }: DashboardClientProps) {
+export function DashboardClient({ userId, displayName, userEmail, stories, familyMemberCount = 1 }: DashboardClientProps) {
   const router = useRouter();
   const { lang } = useLanguage();
   const bt = backendTranslations[lang];
 
+  const [activeTab, setActiveTab] = useState<'all' | 'mine' | 'family'>('all');
   const [pendingDraft, setPendingDraft] = useState<PendingDraft | null>(null);
   const [claimingDraft, setClaimingDraft] = useState(false);
 
@@ -84,6 +91,16 @@ export function DashboardClient({ userId, displayName, userEmail, stories }: Das
   };
 
   const audioCount = stories?.filter(s => s.audio_url).length ?? 0;
+  const myStories = (stories || []).filter(s => s.user_id === userId);
+  const familyStories = (stories || []).filter(s => s.user_id !== userId);
+  const myStoriesCount = myStories.length;
+  const familyStoriesCount = familyStories.length;
+
+  const displayedStories = activeTab === 'all'
+    ? (stories || [])
+    : activeTab === 'mine'
+      ? myStories
+      : familyStories;
 
   return (
     <div className={styles.page}>
@@ -263,13 +280,40 @@ export function DashboardClient({ userId, displayName, userEmail, stories }: Das
             <span className={styles.statLabel}>{bt.dashboard.stats.audioRecordings}</span>
           </div>
           <div className={styles.stat}>
-            <span className={styles.statNum}>1</span>
+            <span className={styles.statNum}>{familyMemberCount}</span>
             <span className={styles.statLabel}>{bt.dashboard.stats.familyMember}</span>
           </div>
         </div>
 
+        {/* Tab Filters if family stories exist */}
+        {stories && stories.length > 0 && familyStoriesCount > 0 && (
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '0.85rem' }}>
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`btn btn-sm ${activeTab === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+              style={{ fontSize: '0.825rem', padding: '0.4rem 0.85rem' }}
+            >
+              {bt.dashboard.tabs.all} ({stories.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('mine')}
+              className={`btn btn-sm ${activeTab === 'mine' ? 'btn-primary' : 'btn-ghost'}`}
+              style={{ fontSize: '0.825rem', padding: '0.4rem 0.85rem' }}
+            >
+              {bt.dashboard.tabs.mine} ({myStoriesCount})
+            </button>
+            <button
+              onClick={() => setActiveTab('family')}
+              className={`btn btn-sm ${activeTab === 'family' ? 'btn-primary' : 'btn-ghost'}`}
+              style={{ fontSize: '0.825rem', padding: '0.4rem 0.85rem' }}
+            >
+              👨‍👩‍👧‍👦 {bt.dashboard.tabs.family} ({familyStoriesCount})
+            </button>
+          </div>
+        )}
+
         {/* Stories grid */}
-        {!stories || stories.length === 0 ? (
+        {!displayedStories || displayedStories.length === 0 ? (
           <div className={styles.empty}>
             <div className={styles.emptyIcon}>📖</div>
             <h3 className={styles.emptyTitle}>{bt.dashboard.empty.title}</h3>
@@ -280,7 +324,7 @@ export function DashboardClient({ userId, displayName, userEmail, stories }: Das
           </div>
         ) : (
           <div className={styles.grid}>
-            {stories.map(story => (
+            {displayedStories.map(story => (
               <Link href={`/story/${story.id}`} key={story.id} className={styles.storyCard}>
                 {story.image_url && (
                   <div className={styles.cardThumb}>
@@ -290,6 +334,25 @@ export function DashboardClient({ userId, displayName, userEmail, stories }: Das
                       className={styles.cardThumbImg}
                       loading="lazy"
                     />
+                  </div>
+                )}
+                {story.isFamilyStory && (
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    background: '#FFF2EE',
+                    color: '#E8503A',
+                    border: '1px solid #FED8CE',
+                    borderRadius: '999px',
+                    padding: '0.2rem 0.6rem',
+                    fontSize: '0.725rem',
+                    fontWeight: 700,
+                    width: 'fit-content',
+                    marginBottom: '0.5rem',
+                  }}>
+                    <span>👨‍👩‍👧‍👦</span>
+                    <span>{bt.dashboard.fromAuthor(story.authorName || bt.dashboard.familyBadge)}{story.authorRole ? ` (${story.authorRole})` : ''}</span>
                   </div>
                 )}
                 <div className={styles.storyMeta}>

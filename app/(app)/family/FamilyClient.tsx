@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -26,6 +26,7 @@ interface PendingInvite {
   owner_id: string;
   member_email: string;
   invited_at: string;
+  inviterName?: string | null;
 }
 
 interface Story {
@@ -253,6 +254,46 @@ export function FamilyClient({
     }
   };
 
+  const handleDeleteMember = async (memberId: string) => {
+    const isOwnerCircle = memberId.startsWith('owner-');
+    const realId = isOwnerCircle ? memberId.replace('owner-', '') : memberId;
+    const confirmMessage = isOwnerCircle
+      ? bt.family.leaveFamilyConfirm
+      : bt.family.deleteMemberConfirm;
+
+    const confirmed = window.confirm(confirmMessage);
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/family/member?id=${realId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setMembers(prev => prev.filter(m => m.id !== memberId && m.id !== realId));
+        if (editingMember?.id === memberId || editingMember?.id === realId) {
+          setEditingMember(null);
+        }
+        router.refresh();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Could not remove member');
+      }
+    } catch {
+      alert('Error removing member');
+    }
+  };
+
+  // Auto-accept if user opened invite link with ?invite=...
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteId = urlParams.get('invite');
+    if (inviteId && pendingInvites.some(inv => inv.id === inviteId)) {
+      handleRespondInvite(inviteId, true);
+      window.history.replaceState({}, '', '/family');
+    }
+  }, [pendingInvites]);
+
   return (
     <div className={styles.page}>
       {/* Header */}
@@ -298,7 +339,7 @@ export function FamilyClient({
           <div key={invite.id} className={styles.inviteBanner}>
             <div className={styles.inviteBannerText}>
               <h4>{bt.family.invitationForYou}</h4>
-              <p>{bt.family.invitationDesc(invite.member_email)}</p>
+              <p>{bt.family.invitationDesc(invite.inviterName || invite.member_email)}</p>
             </div>
             <div className={styles.inviteBannerActions}>
               <button
@@ -399,25 +440,66 @@ export function FamilyClient({
                       </span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                         {!member.isOwner && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => openEditMember(member)}
+                              title={bt.family.editMember}
+                              style={{
+                                background: '#F5F5F4',
+                                border: '1px solid #E7E5E4',
+                                color: 'var(--color-ink)',
+                                fontSize: '0.725rem',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: 'var(--radius-md)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.2rem',
+                              }}
+                            >
+                              ✏️ {bt.family.editMember}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteMember(member.id)}
+                              title={bt.family.deleteMember}
+                              style={{
+                                background: '#FEF2F2',
+                                border: '1px solid #FECACA',
+                                color: '#DC2626',
+                                fontSize: '0.725rem',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                padding: '0.2rem 0.45rem',
+                                borderRadius: 'var(--radius-md)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.2rem',
+                              }}
+                            >
+                              🗑️ {bt.family.deleteMember}
+                            </button>
+                          </>
+                        )}
+                        {member.isOwner && member.member_id !== currentUser.id && (
                           <button
                             type="button"
-                            onClick={() => openEditMember(member)}
-                            title={bt.family.editMember}
+                            onClick={() => handleDeleteMember(member.id)}
+                            title={bt.family.leaveFamily}
                             style={{
-                              background: '#F5F5F4',
-                              border: '1px solid #E7E5E4',
-                              color: 'var(--color-ink)',
+                              background: '#FEF2F2',
+                              border: '1px solid #FECACA',
+                              color: '#DC2626',
                               fontSize: '0.725rem',
                               fontWeight: 500,
                               cursor: 'pointer',
                               padding: '0.2rem 0.5rem',
                               borderRadius: 'var(--radius-md)',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.2rem',
                             }}
                           >
-                            ✏️ {bt.family.editMember}
+                            🚪 {bt.family.leaveFamily}
                           </button>
                         )}
                         {member.status === 'pending' && !member.isOwner && (
@@ -674,21 +756,41 @@ export function FamilyClient({
                 />
               </div>
 
-              <div className={styles.modalActions}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border-light)' }}>
                 <button
                   type="button"
-                  className="btn btn-ghost"
-                  onClick={() => setEditingMember(null)}
+                  onClick={() => handleDeleteMember(editingMember.id)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#DC2626',
+                    fontSize: '0.825rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    padding: '0.4rem 0.2rem',
+                  }}
                 >
-                  {lang === 'vi' ? 'Hủy' : 'Cancel'}
+                  🗑️ {bt.family.deleteMember}
                 </button>
-                <button
-                  type="submit"
-                  disabled={savingEdit}
-                  className="btn btn-primary"
-                >
-                  {savingEdit ? bt.story.saving : bt.family.saveMember}
-                </button>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => setEditingMember(null)}
+                  >
+                    {lang === 'vi' ? 'Hủy' : 'Cancel'}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingEdit}
+                    className="btn btn-primary"
+                  >
+                    {savingEdit ? bt.story.saving : bt.family.saveMember}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
