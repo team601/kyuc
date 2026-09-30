@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { getRandomQuestion, categoryMeta, type Category } from '@/lib/questions';
 import PhotoUploader from '@/components/story/PhotoUploader';
+import { AudioPlayer } from '@/components/story/AudioPlayer';
 import { useLanguage } from '@/lib/LanguageContext';
 import { backendTranslations } from '@/lib/translations';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
@@ -61,11 +62,45 @@ function NewStoryContent() {
 
   const [micError, setMicError] = useState<string | null>(null);
 
+  const getOptimalAudioMimeType = () => {
+    if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') return '';
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+
+    if (isIOS || isSafari) {
+      if (MediaRecorder.isTypeSupported('audio/mp4;codecs=mp4a.40.2')) return 'audio/mp4;codecs=mp4a.40.2';
+      if (MediaRecorder.isTypeSupported('audio/mp4')) return 'audio/mp4';
+      if (MediaRecorder.isTypeSupported('audio/aac')) return 'audio/aac';
+    }
+
+    const candidates = [
+      'audio/mp4;codecs=mp4a.40.2',
+      'audio/mp4',
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+    ];
+
+    for (const mime of candidates) {
+      if (MediaRecorder.isTypeSupported(mime)) return mime;
+    }
+    return '';
+  };
+
   const startRecording = useCallback(async () => {
     setMicError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const preferredMime = getOptimalAudioMimeType();
+      const options = preferredMime ? { mimeType: preferredMime } : undefined;
+      let recorder: MediaRecorder;
+      try {
+        recorder = options ? new MediaRecorder(stream, options) : new MediaRecorder(stream);
+      } catch {
+        recorder = new MediaRecorder(stream);
+      }
+
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
 
@@ -73,7 +108,8 @@ function NewStoryContent() {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const actualMime = recorder.mimeType || preferredMime || 'audio/mp4';
+        const blob = new Blob(chunksRef.current, { type: actualMime });
         setAudioBlob(blob);
         setAudioUrl(URL.createObjectURL(blob));
         stream.getTracks().forEach(t => t.stop());
@@ -155,10 +191,15 @@ function NewStoryContent() {
         setSaving(false);
         return;
       }
-      const fileName = `${user.id}/${Date.now()}.webm`;
+      const isMp4 = audioBlob.type.includes('mp4') || audioBlob.type.includes('aac');
+      const isOgg = audioBlob.type.includes('ogg');
+      const isWav = audioBlob.type.includes('wav');
+      const ext = isMp4 ? 'm4a' : isOgg ? 'ogg' : isWav ? 'wav' : 'webm';
+      const fileName = `${user.id}/${Date.now()}.${ext}`;
+      const uploadMime = audioBlob.type || (isMp4 ? 'audio/mp4' : 'audio/webm');
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('audio')
-        .upload(fileName, audioBlob, { contentType: 'audio/webm' });
+        .upload(fileName, audioBlob, { contentType: uploadMime });
       if (!uploadError && uploadData) {
         const { data: urlData } = supabase.storage.from('audio').getPublicUrl(uploadData.path);
         audio_url = urlData.publicUrl;
@@ -382,7 +423,9 @@ function NewStoryContent() {
               </div>
 
               {audioUrl && (
-                <audio controls src={audioUrl} style={{ width: '100%', marginTop: '0.5rem' }} />
+                <div style={{ marginTop: '0.75rem' }}>
+                  <AudioPlayer src={audioUrl} />
+                </div>
               )}
 
               {/* Voice Transcript */}

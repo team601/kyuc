@@ -1,0 +1,154 @@
+.playerCard {
+  background: #FFFDF9;
+  border: 1px solid #EFE8DE;
+  border-radius: var(--radius-xl, 1rem);
+  padding: 1.15rem 1.35rem;
+  box-shadow: 0 4px 16px rgba(45, 41, 38, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.playerCard:hover {
+  border-color: #E2D7C8;
+  box-shadow: 0 6px 20px rgba(45, 41, 38, 0.07);
+}
+
+.mainRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.playBtn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-brand, #E8503A);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+  box-shadow: 0 3px 10px rgba(232, 80, 58, 0.3);
+}
+
+.playBtn:hover {
+  transform: scale(1.05);
+  background: #D43E29;
+}
+
+.playBtn:active {
+  transform: scale(0.96);
+}
+
+.scrubberArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.progressBarContainer {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  background: #EFE7DE;
+  border-radius: 9999px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 100%;
+  background: linear-gradient(90deg, #E8503A, #F0705E);
+  border-radius: 9999px;
+  transition: width 0.1s linear;
+}
+
+.timeRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: #736F6E;
+  font-weight: 500;
+}
+
+.controlsRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.speedBtn {
+  background: #F4EFEA;
+  border: 1px solid #E5DFD7;
+  color: #55504D;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius-md, 0.5rem);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.speedBtn:hover {
+  background: #EAE3DC;
+  color: #2D2926;
+}
+
+.downloadLink {
+  background: transparent;
+  border: 1px solid #E5DFD7;
+  color: #736F6E;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-md, 0.5rem);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all 0.15s ease;
+}
+
+.downloadLink:hover {
+  background: #F4EFEA;
+  color: #2D2926;
+  border-color: #D6CEC5;
+}
+
+.errorBanner {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 0.65rem 0.85rem;
+  font-size: 0.8rem;
+  color: #991B1B;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.errorBanner a {
+  color: #DC2626;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.errorBanner button {
+  background: none;
+  border: 1px solid #FECACA;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: #991B1B;
+}

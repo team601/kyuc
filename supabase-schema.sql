@@ -87,11 +87,14 @@ create table if not exists public.family_members (
   id uuid default gen_random_uuid() primary key,
   owner_id uuid references public.profiles on delete cascade not null,
   member_email text not null,
+  role text,
   member_id uuid references public.profiles on delete set null,
   status text default 'pending' check (status in ('pending', 'accepted', 'declined')),
   invited_at timestamptz default now() not null,
   unique(owner_id, member_email)
 );
+
+alter table public.family_members add column if not exists role text;
 
 alter table public.family_members enable row level security;
 
@@ -217,7 +220,7 @@ create policy "Users can view family invites for their email or by owner"
   on public.family_members for select
   using (
     auth.uid() = owner_id or 
-    member_email = (select email from auth.users where id = auth.uid()) or
+    member_email = (auth.jwt() ->> 'email') or
     member_id = auth.uid()
   );
 
@@ -225,7 +228,7 @@ drop policy if exists "Invited members can update their invitation status" on pu
 create policy "Invited members can update their invitation status"
   on public.family_members for update
   using (
-    member_email = (select email from auth.users where id = auth.uid()) or
+    member_email = (auth.jwt() ->> 'email') or
     member_id = auth.uid()
   );
 

@@ -75,28 +75,23 @@ export function FamilyClient({
     setInviteSuccess(false);
 
     try {
-      const supabase = createClient();
-      const newMember = {
-        owner_id: currentUser.id,
-        member_email: inviteEmail.trim().toLowerCase(),
-        status: 'pending' as const,
-      };
+      const res = await fetch('/api/family/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: inviteEmail.trim().toLowerCase(),
+          role: inviteRole.trim() || undefined,
+        }),
+      });
 
-      const { data, error } = await supabase
-        .from('family_members')
-        .insert(newMember)
-        .select()
-        .single();
+      const data = await res.json();
 
-      if (error) {
-        if (error.code === '23505') {
-          throw new Error(lang === 'vi' ? 'Email này đã được mời trước đó.' : 'This email has already been invited.');
-        }
-        throw error;
+      if (!res.ok) {
+        throw new Error(data.error || (lang === 'vi' ? 'Lỗi khi gửi lời mời' : 'Error sending invite'));
       }
 
-      if (data) {
-        setMembers(prev => [...prev, data]);
+      if (data.member) {
+        setMembers(prev => [data.member, ...prev.filter(m => m.member_email !== data.member.member_email)]);
       }
 
       setInviteSuccess(true);
@@ -107,9 +102,27 @@ export function FamilyClient({
         setInviteSuccess(false);
       }, 1200);
     } catch (err: any) {
-      setInviteError(err.message || 'Error sending invite');
+      setInviteError(err.message || (lang === 'vi' ? 'Không thể gửi lời mời. Vui lòng thử lại.' : 'Could not send invite.'));
     } finally {
       setSendingInvite(false);
+    }
+  };
+
+  const handleCancelInvite = async (memberId: string) => {
+    const confirmCancel = window.confirm(
+      lang === 'vi' ? 'Bạn có chắc chắn muốn hủy lời mời này?' : 'Are you sure you want to cancel this invitation?'
+    );
+    if (!confirmCancel) return;
+
+    try {
+      const res = await fetch(`/api/family/invite?id=${memberId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setMembers(prev => prev.filter(m => m.id !== memberId));
+      }
+    } catch {
+      // ignore
     }
   };
 
@@ -241,9 +254,27 @@ export function FamilyClient({
                 <div className={styles.memberInfo}>
                   <p className={styles.memberName}>{member.member_email}</p>
                   <p className={styles.memberRole}>{member.role || (lang === 'vi' ? 'Người thân' : 'Family')}</p>
-                  <span className={`${styles.memberStatus} ${member.status === 'accepted' ? styles.statusAccepted : styles.statusPending}`}>
-                    {member.status === 'accepted' ? `✓ ${bt.family.acceptedStatus}` : `⏳ ${bt.family.pendingStatus}`}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginTop: '0.25rem' }}>
+                    <span className={`${styles.memberStatus} ${member.status === 'accepted' ? styles.statusAccepted : styles.statusPending}`}>
+                      {member.status === 'accepted' ? `✓ ${bt.family.acceptedStatus}` : `⏳ ${bt.family.pendingStatus}`}
+                    </span>
+                    {member.status === 'pending' && (
+                      <button
+                        type="button"
+                        onClick={() => handleCancelInvite(member.id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#DC2626',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                          padding: '0.1rem 0.3rem',
+                        }}
+                      >
+                        {lang === 'vi' ? 'Hủy' : 'Cancel'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

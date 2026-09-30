@@ -8,6 +8,7 @@ import { backendTranslations } from '@/lib/translations';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { createClient } from '@/lib/supabase/client';
 import { ShareModal } from '@/components/story/ShareModal';
+import { AudioPlayer } from '@/components/story/AudioPlayer';
 import styles from './story.module.css';
 
 interface Story {
@@ -169,7 +170,7 @@ export function StoryDetailClient({ story }: StoryDetailClientProps) {
           {story.audio_url && (
             <div className={styles.audioWrap}>
               <p className={styles.audioLabel}>🎙 {bt.story.audioSection}</p>
-              <audio controls src={story.audio_url} className={styles.audio} />
+              <AudioPlayer src={story.audio_url} />
             </div>
           )}
 
