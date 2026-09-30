@@ -53,6 +53,18 @@ export async function proxy(request: NextRequest) {
       url.pathname = '/dashboard';
       return NextResponse.redirect(url);
     }
+
+    if (user) {
+      request.headers.set('x-user-id', user.id);
+      request.headers.set('x-user-email', user.email || '');
+      const rawName = user.user_metadata?.display_name || user.email?.split('@')[0] || '';
+      request.headers.set('x-user-name', encodeURIComponent(rawName));
+      supabaseResponse = NextResponse.next({
+        request: {
+          headers: request.headers,
+        },
+      });
+    }
   } catch (error) {
     console.error('Proxy auth check error:', error);
   }

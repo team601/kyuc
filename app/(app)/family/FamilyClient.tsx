@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { backendTranslations } from '@/lib/translations';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
+import { createClient } from '@/lib/supabase/client';
 import styles from './family.module.css';
 
 interface FamilyMember {
@@ -153,6 +154,105 @@ export function FamilyClient({
     }
   };
 
+  // Edit member state
+  const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editRole, setEditRole] = useState('');
+  const [editAvatarUrl, setEditAvatarUrl] = useState<string | null>(null);
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSuccess, setEditSuccess] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const openEditMember = (member: FamilyMember) => {
+    setEditingMember(member);
+    setEditName(member.displayName || '');
+    setEditRole(member.role || '');
+    setEditAvatarUrl(member.avatarUrl || null);
+    setEditAvatarPreview(member.avatarUrl || null);
+    setEditAvatarFile(null);
+    setEditError(null);
+    setEditSuccess(false);
+  };
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setEditAvatarFile(file);
+      setEditAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMember) return;
+    setSavingEdit(true);
+    setEditError(null);
+
+    try {
+      let finalAvatarUrl = editAvatarUrl;
+
+      if (editAvatarFile) {
+        const supabase = createClient();
+        const ext = editAvatarFile.name.split('.').pop() || 'webp';
+        const filePath = `avatars/${editingMember.id}-${Date.now()}.${ext}`;
+        const { data: uploadData, error: uploadErr } = await supabase.storage
+          .from('photos')
+          .upload(filePath, editAvatarFile, { contentType: editAvatarFile.type });
+
+        if (uploadErr) {
+          throw new Error(uploadErr.message);
+        }
+        if (uploadData) {
+          const { data: urlData } = supabase.storage.from('photos').getPublicUrl(uploadData.path);
+          finalAvatarUrl = urlData.publicUrl;
+        }
+      }
+
+      const res = await fetch('/api/family/member', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          memberId: editingMember.id,
+          role: editRole,
+          customName: editName,
+          customAvatarUrl: finalAvatarUrl,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to update member');
+      }
+
+      setMembers(prev =>
+        prev.map(m =>
+          m.id === editingMember.id
+            ? {
+                ...m,
+                displayName: editName.trim() || m.displayName,
+                role: editRole.trim() || null,
+                avatarUrl: finalAvatarUrl,
+              }
+            : m
+        )
+      );
+
+      setEditSuccess(true);
+      router.refresh();
+      setTimeout(() => {
+        setEditingMember(null);
+        setEditSuccess(false);
+      }, 1000);
+    } catch (err: any) {
+      setEditError(err.message || 'Error updating member');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   return (
     <div className={styles.page}>
       {/* Header */}
@@ -297,22 +397,46 @@ export function FamilyClient({
                       <span className={`${styles.memberStatus} ${member.status === 'accepted' ? styles.statusAccepted : styles.statusPending}`}>
                         {member.status === 'accepted' ? `✓ ${bt.family.acceptedStatus}` : `⏳ ${bt.family.pendingStatus}`}
                       </span>
-                      {member.status === 'pending' && !member.isOwner && (
-                        <button
-                          type="button"
-                          onClick={() => handleCancelInvite(member.id)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#DC2626',
-                            fontSize: '0.75rem',
-                            cursor: 'pointer',
-                            padding: '0.1rem 0.3rem',
-                          }}
-                        >
-                          {lang === 'vi' ? 'Hủy' : 'Cancel'}
-                        </button>
-                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        {!member.isOwner && (
+                          <button
+                            type="button"
+                            onClick={() => openEditMember(member)}
+                            title={bt.family.editMember}
+                            style={{
+                              background: '#F5F5F4',
+                              border: '1px solid #E7E5E4',
+                              color: 'var(--color-ink)',
+                              fontSize: '0.725rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: 'var(--radius-md)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.2rem',
+                            }}
+                          >
+                            ✏️ {bt.family.editMember}
+                          </button>
+                        )}
+                        {member.status === 'pending' && !member.isOwner && (
+                          <button
+                            type="button"
+                            onClick={() => handleCancelInvite(member.id)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#DC2626',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer',
+                              padding: '0.1rem 0.3rem',
+                            }}
+                          >
+                            {lang === 'vi' ? 'Hủy' : 'Cancel'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -439,6 +563,131 @@ export function FamilyClient({
                   className="btn btn-primary"
                 >
                   {sendingInvite ? bt.family.sending : bt.family.sendInvite}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Member Modal */}
+      {editingMember && (
+        <div className={styles.modalBackdrop} onClick={() => setEditingMember(null)}>
+          <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>{bt.family.editMemberTitle}</h3>
+            <p className={styles.modalDesc}>{bt.family.editMemberDesc}</p>
+
+            {editSuccess && (
+              <div style={{ background: '#F0FDF4', color: '#166534', padding: '0.65rem 1rem', borderRadius: '0.5rem', fontSize: '0.875rem' }}>
+                {bt.family.memberUpdated}
+              </div>
+            )}
+
+            {editError && (
+              <div style={{ background: '#FEF2F2', color: '#991B1B', padding: '0.65rem 1rem', borderRadius: '0.5rem', fontSize: '0.875rem' }}>
+                {editError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveEdit} className={styles.modalForm}>
+              {/* Avatar Selector */}
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0' }}>
+                <div
+                  style={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    background: '#E8503A',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.75rem',
+                    fontWeight: 700,
+                    border: '3px solid #FAF7F2',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  }}
+                >
+                  {editAvatarPreview ? (
+                    <img
+                      src={editAvatarPreview}
+                      alt="Avatar"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    (editName || editingMember.displayName || editingMember.member_email || 'M')[0]?.toUpperCase()
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input
+                    type="file"
+                    ref={avatarInputRef}
+                    onChange={handleAvatarFileChange}
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="btn btn-ghost btn-sm"
+                    style={{ fontSize: '0.8rem' }}
+                  >
+                    📷 {bt.family.changeAvatar}
+                  </button>
+                  {editAvatarPreview && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditAvatarFile(null);
+                        setEditAvatarUrl(null);
+                        setEditAvatarPreview(null);
+                      }}
+                      className="btn btn-ghost btn-sm"
+                      style={{ fontSize: '0.8rem', color: '#DC2626' }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">{bt.family.nicknameLabel}</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  placeholder={bt.family.nicknamePlaceholder}
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">{bt.family.roleLabel}</label>
+                <input
+                  type="text"
+                  value={editRole}
+                  onChange={e => setEditRole(e.target.value)}
+                  placeholder={bt.family.rolePlaceholder}
+                  className="form-input"
+                />
+              </div>
+
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setEditingMember(null)}
+                >
+                  {lang === 'vi' ? 'Hủy' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="btn btn-primary"
+                >
+                  {savingEdit ? bt.story.saving : bt.family.saveMember}
                 </button>
               </div>
             </form>

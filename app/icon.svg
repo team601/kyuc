@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="7" fill="#E8503A"/>
+  <!-- Kyuc 'k' mark -->
+  <path d="M8 6v20M8 17L19 7M8 17L19 26" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Degree symbol ° -->
+  <circle cx="23" cy="8" r="2.5" fill="none" stroke="#FFFFFF" stroke-width="1.8"/>
+</svg>

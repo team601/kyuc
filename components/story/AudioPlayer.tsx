@@ -45,19 +45,33 @@ export function AudioPlayer({ src, title, className }: AudioPlayerProps) {
 
   const handleTimeUpdate = () => {
     if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
+      const cur = audioRef.current.currentTime;
+      setCurrentTime(cur);
+      if (!isFinite(duration) || duration <= 0) {
+        if (audioRef.current.seekable && audioRef.current.seekable.length > 0) {
+          const end = audioRef.current.seekable.end(0);
+          if (isFinite(end) && end > 0) setDuration(end);
+        }
+      }
     }
   };
 
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
-      setDuration(audioRef.current.duration || 0);
+      let d = audioRef.current.duration;
+      if (!isFinite(d) && audioRef.current.seekable && audioRef.current.seekable.length > 0) {
+        const end = audioRef.current.seekable.end(0);
+        if (isFinite(end) && end > 0) d = end;
+      }
+      if (isFinite(d) && d > 0) {
+        setDuration(d);
+      }
       setHasError(false);
     }
   };
 
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!audioRef.current || !duration) return;
+    if (!audioRef.current || !duration || !isFinite(duration)) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const pct = Math.max(0, Math.min(1, clickX / rect.width));
@@ -91,13 +105,13 @@ export function AudioPlayer({ src, title, className }: AudioPlayerProps) {
   };
 
   const formatTime = (secs: number) => {
-    if (isNaN(secs) || secs < 0) return '0:00';
+    if (!isFinite(secs) || isNaN(secs) || secs < 0) return '0:00';
     const m = Math.floor(secs / 60);
     const s = Math.floor(secs % 60);
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const progressPct = isFinite(duration) && duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
     <div className={`${styles.playerCard} ${className || ''}`}>
@@ -108,6 +122,7 @@ export function AudioPlayer({ src, title, className }: AudioPlayerProps) {
         playsInline
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
+        onDurationChange={handleLoadedMetadata}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onEnded={() => {
@@ -146,7 +161,7 @@ export function AudioPlayer({ src, title, className }: AudioPlayerProps) {
             role="slider"
             aria-valuenow={currentTime}
             aria-valuemin={0}
-            aria-valuemax={duration}
+            aria-valuemax={isFinite(duration) ? duration : 100}
             tabIndex={0}
           >
             <div className={styles.progressBar} style={{ width: `${progressPct}%` }} />
@@ -154,7 +169,7 @@ export function AudioPlayer({ src, title, className }: AudioPlayerProps) {
 
           <div className={styles.timeRow}>
             <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
+            <span>{isFinite(duration) && duration > 0 ? formatTime(duration) : '--:--'}</span>
           </div>
         </div>
 

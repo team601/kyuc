@@ -108,8 +108,8 @@ export default async function FamilyPage() {
     combinedMembers.push({
       id: m.id,
       member_email: m.member_email,
-      displayName: memProf?.display_name || null,
-      avatarUrl: memProf?.avatar_url || null,
+      displayName: m.custom_name || memProf?.display_name || null,
+      avatarUrl: m.custom_avatar_url || memProf?.avatar_url || null,
       role: m.role || null,
       status: m.status,
       invited_at: m.invited_at,

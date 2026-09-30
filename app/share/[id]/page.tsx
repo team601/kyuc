@@ -3,21 +3,6 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { ShareClient } from './ShareClient';
 
-interface Story {
-  id: string;
-  title: string;
-  category: string;
-  created_at: string;
-  content_text?: string | null;
-  audio_url?: string | null;
-  audio_transcript?: string | null;
-  image_url?: string | null;
-  photo_caption?: string | null;
-  question_en?: string | null;
-  question_vi?: string | null;
-  is_public?: boolean;
-}
-
 export async function generateMetadata({
   params,
 }: {
@@ -28,11 +13,11 @@ export async function generateMetadata({
 
   const { data: story } = await supabase
     .from('stories')
-    .select('title, content_text, image_url, is_public')
+    .select('title, content_text, image_url, is_public, visibility')
     .eq('id', id)
-    .single();
+    .maybeSingle();
 
-  if (!story || !story.is_public) {
+  if (!story || story.visibility === 'private' || (!story.is_public && !story.visibility)) {
     return {
       title: 'Story not found | kyuc°',
     };
@@ -66,16 +51,57 @@ export default async function PublicSharePage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { data: story, error } = await supabase
     .from('stories')
-    .select('*')
+    .select('*, profiles:user_id(display_name, avatar_url)')
     .eq('id', id)
-    .single();
+    .maybeSingle();
 
-  if (error || !story || !story.is_public) {
+  if (error || !story) {
     notFound();
   }
 
-  return <ShareClient story={story} />;
+  const visibility = story.visibility || (story.is_public ? 'public' : 'family');
+
+  // If story is strictly private and viewer is not the creator, return 404
+  if (visibility === 'private' && story.user_id !== user?.id) {
+    notFound();
+  }
+
+  // If story is family-only, verify viewer membership in the creator's family circle
+  let isFamilyAuthorized = false;
+  if (user) {
+    if (user.id === story.user_id) {
+      isFamilyAuthorized = true;
+    } else {
+      const userEmail = (user.email || '').toLowerCase();
+      const { data: membership } = await supabase
+        .from('family_members')
+        .select('id')
+        .eq('status', 'accepted')
+        .or(
+          `and(owner_id.eq.${story.user_id},or(member_id.eq.${user.id},member_email.eq.${userEmail})),and(owner_id.eq.${user.id},member_id.eq.${story.user_id})`
+        )
+        .maybeSingle();
+
+      if (membership) {
+        isFamilyAuthorized = true;
+      }
+    }
+  }
+
+  const isLockedForFamily = visibility === 'family' && !isFamilyAuthorized;
+  const authorName = (story.profiles as any)?.display_name || 'Người thân';
+
+  return (
+    <ShareClient
+      story={story}
+      isLockedForFamily={isLockedForFamily}
+      authorName={authorName}
+    />
+  );
 }

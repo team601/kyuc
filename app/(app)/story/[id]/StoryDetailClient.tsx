@@ -24,6 +24,7 @@ interface Story {
   question_en?: string | null;
   question_vi?: string | null;
   is_public?: boolean;
+  visibility?: 'private' | 'family' | 'public';
 }
 
 interface StoryDetailClientProps {
@@ -101,13 +102,40 @@ export function StoryDetailClient({ story }: StoryDetailClientProps) {
         <article className={styles.article}>
           {/* Top Bar with Category, Date, and Action Bar */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <div className={styles.meta}>
+            <div className={styles.meta} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <span className={styles.category}>{catLabel}</span>
               <span className={styles.date}>
                 {new Date(story.created_at).toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', {
                   year: 'numeric', month: 'long', day: 'numeric'
                 })}
               </span>
+              <button
+                type="button"
+                onClick={() => setShowShareModal(true)}
+                style={{
+                  background: (story.visibility || (story.is_public ? 'public' : 'family')) === 'public' ? '#F0FDF4' : (story.visibility || (story.is_public ? 'public' : 'family')) === 'family' ? '#FFF7ED' : '#F3F4F6',
+                  color: (story.visibility || (story.is_public ? 'public' : 'family')) === 'public' ? '#166534' : (story.visibility || (story.is_public ? 'public' : 'family')) === 'family' ? '#9A3412' : '#4B5563',
+                  border: '1px solid currentColor',
+                  borderRadius: '9999px',
+                  padding: '0.15rem 0.55rem',
+                  fontSize: '0.725rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                }}
+                title={lang === 'vi' ? 'Thay đổi quyền riêng tư' : 'Change privacy'}
+              >
+                <span>{(story.visibility || (story.is_public ? 'public' : 'family')) === 'public' ? '🌐' : (story.visibility || (story.is_public ? 'public' : 'family')) === 'family' ? '👨‍👩‍👧‍👦' : '🔒'}</span>
+                <span>
+                  {(story.visibility || (story.is_public ? 'public' : 'family')) === 'public'
+                    ? lang === 'vi' ? 'Công khai' : 'Public'
+                    : (story.visibility || (story.is_public ? 'public' : 'family')) === 'family'
+                    ? lang === 'vi' ? 'Gia đình' : 'Family'
+                    : lang === 'vi' ? 'Riêng tư' : 'Private'}
+                </span>
+              </button>
             </div>
 
             {/* Quick Actions (Share, Edit, Delete) */}
@@ -254,7 +282,11 @@ export function StoryDetailClient({ story }: StoryDetailClientProps) {
         <ShareModal
           storyId={story.id}
           storyTitle={story.title}
-          onClose={() => setShowShareModal(false)}
+          onClose={() => {
+            setShowShareModal(false);
+            router.refresh();
+          }}
+          initialVisibility={story.visibility || (story.is_public ? 'public' : 'family')}
           isPublicInitially={story.is_public}
         />
       )}

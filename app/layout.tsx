@@ -20,6 +20,11 @@ const lora = Lora({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://kyuc.alignlab.com'),
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
   title: {
     default: "kyuc° — Record & Preserve Family Stories in Their Own Voice",
     template: "%s | kyuc°",

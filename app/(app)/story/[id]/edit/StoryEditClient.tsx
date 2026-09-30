@@ -20,6 +20,8 @@ interface Story {
   audio_transcript?: string | null;
   image_url?: string | null;
   photo_caption?: string | null;
+  is_public?: boolean;
+  visibility?: 'private' | 'family' | 'public';
 }
 
 export function StoryEditClient({ story }: { story: Story }) {
@@ -29,6 +31,9 @@ export function StoryEditClient({ story }: { story: Story }) {
 
   const [title, setTitle] = useState(story.title || '');
   const [category, setCategory] = useState(story.category || 'roots');
+  const [visibility, setVisibility] = useState<'private' | 'family' | 'public'>(
+    story.visibility || (story.is_public ? 'public' : 'family')
+  );
   const [contentText, setContentText] = useState(story.content_text || '');
   const [photoCaption, setPhotoCaption] = useState(story.photo_caption || '');
   const [imageUrl, setImageUrl] = useState(story.image_url || '');
@@ -115,6 +120,8 @@ export function StoryEditClient({ story }: { story: Story }) {
         .update({
           title: title.trim(),
           category,
+          visibility,
+          is_public: visibility === 'public',
           content_text: contentText.trim() || null,
           photo_caption: photoCaption.trim() || null,
           image_url: finalImageUrl,
@@ -212,6 +219,22 @@ export function StoryEditClient({ story }: { story: Story }) {
               <option value="roots">{lang === 'vi' ? 'Gốc Rễ (Roots)' : 'Roots'}</option>
               <option value="traditions">{lang === 'vi' ? 'Truyền Thống (Traditions)' : 'Traditions'}</option>
               <option value="life_lessons">{lang === 'vi' ? 'Bài Học Cuộc Đời (Life Lessons)' : 'Life Lessons'}</option>
+            </select>
+          </div>
+
+          {/* Privacy & Visibility */}
+          <div className={styles.fieldGroup}>
+            <label className={styles.label}>
+              {lang === 'vi' ? 'Quyền riêng tư câu chuyện' : 'Story Privacy & Visibility'}
+            </label>
+            <select
+              value={visibility}
+              onChange={e => setVisibility(e.target.value as any)}
+              className={styles.select}
+            >
+              <option value="family">{lang === 'vi' ? '👨‍👩‍👧‍👦 Vòng tròn gia đình (Chỉ thành viên xem được)' : '👨‍👩‍👧‍👦 Family Circle Only'}</option>
+              <option value="public">{lang === 'vi' ? '🌐 Công khai (Bất kỳ ai có liên kết)' : '🌐 Public via Link'}</option>
+              <option value="private">{lang === 'vi' ? '🔒 Riêng tư (Chỉ mình tôi)' : '🔒 Private to Me'}</option>
             </select>
           </div>
 

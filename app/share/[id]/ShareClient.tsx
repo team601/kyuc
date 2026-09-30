@@ -22,7 +22,17 @@ interface Story {
   question_vi?: string | null;
 }
 
-export function ShareClient({ story }: { story: Story }) {
+interface ShareClientProps {
+  story: Story;
+  isLockedForFamily?: boolean;
+  authorName?: string;
+}
+
+export function ShareClient({
+  story,
+  isLockedForFamily = false,
+  authorName = 'Người thân',
+}: ShareClientProps) {
   const { lang } = useLanguage();
   const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -92,7 +102,42 @@ export function ShareClient({ story }: { story: Story }) {
       </header>
 
       <main className={styles.main}>
-        <article className={styles.article}>
+        {isLockedForFamily ? (
+          <div
+            style={{
+              background: '#FFFDF9',
+              border: '1.5px solid #FED7AA',
+              borderRadius: 'var(--radius-xl, 1rem)',
+              padding: '3rem 1.5rem',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '1rem',
+              maxWidth: '540px',
+              margin: '2rem auto',
+              boxShadow: '0 8px 24px rgba(45, 41, 38, 0.05)',
+            }}
+          >
+            <div style={{ fontSize: '3.5rem' }}>👨‍👩‍👧‍👦</div>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--color-ink)' }}>
+              {lang === 'vi' ? 'Ký ức thuộc Vòng tròn Gia đình' : 'Family Circle Story'}
+            </h2>
+            <p style={{ fontSize: '0.95rem', color: '#55504D', lineHeight: 1.65, maxWidth: '440px', margin: '0 auto' }}>
+              {lang === 'vi'
+                ? `Câu chuyện này được ${authorName} lưu giữ riêng cho các thành viên trong Vòng tròn gia đình. Vui lòng đăng nhập với tài khoản gia đình để lắng nghe.`
+                : `This memory was preserved by ${authorName} exclusively for Family Circle members. Please sign in with your family account to listen.`}
+            </p>
+            <Link
+              href={`/login?next=/share/${story.id}`}
+              className="btn btn-primary"
+              style={{ padding: '0.75rem 1.75rem', marginTop: '0.5rem', textDecoration: 'none' }}
+            >
+              {lang === 'vi' ? 'Đăng nhập vào gia đình →' : 'Sign in to Family →'}
+            </Link>
+          </div>
+        ) : (
+          <article className={styles.article}>
           <div className={styles.meta}>
             <span className={styles.category}>{catLabel}</span>
             <span className={styles.date}>
@@ -186,6 +231,7 @@ export function ShareClient({ story }: { story: Story }) {
             </div>
           )}
         </article>
+      )}
 
         {/* Call to action for readers */}
         <div className={styles.inviteCard}>
