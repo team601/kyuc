@@ -232,3 +232,20 @@ create policy "Invited members can update their invitation status"
     member_id = auth.uid()
   );
 
+-- Allow family members to view each other's stories in the family circle
+drop policy if exists "Family members can view each other's stories" on public.stories;
+create policy "Family members can view each other's stories"
+  on public.stories for select
+  using (
+    auth.uid() = user_id or
+    is_public = true or
+    exists (
+      select 1 from public.family_members fm
+      where fm.status = 'accepted'
+      and (
+        (fm.owner_id = auth.uid() and fm.member_id = stories.user_id) or
+        (fm.owner_id = stories.user_id and (fm.member_id = auth.uid() or fm.member_email = (auth.jwt() ->> 'email')))
+      )
+    )
+  );
+

@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { backendTranslations } from '@/lib/translations';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
-import { createClient } from '@/lib/supabase/client';
 import styles from './family.module.css';
 
 interface FamilyMember {
@@ -15,6 +15,9 @@ interface FamilyMember {
   status: 'pending' | 'accepted' | 'declined';
   invited_at: string;
   member_id?: string | null;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+  isOwner?: boolean;
 }
 
 interface PendingInvite {
@@ -52,6 +55,7 @@ export function FamilyClient({
   initialPendingInvites,
   familyStories,
 }: FamilyClientProps) {
+  const router = useRouter();
   const { lang } = useLanguage();
   const bt = backendTranslations[lang];
 
@@ -81,6 +85,7 @@ export function FamilyClient({
         body: JSON.stringify({
           email: inviteEmail.trim().toLowerCase(),
           role: inviteRole.trim() || undefined,
+          lang,
         }),
       });
 
@@ -97,6 +102,7 @@ export function FamilyClient({
       setInviteSuccess(true);
       setInviteEmail('');
       setInviteRole('');
+      router.refresh();
       setTimeout(() => {
         setShowInviteModal(false);
         setInviteSuccess(false);
@@ -120,6 +126,7 @@ export function FamilyClient({
       });
       if (res.ok) {
         setMembers(prev => prev.filter(m => m.id !== memberId));
+        router.refresh();
       }
     } catch {
       // ignore
@@ -128,18 +135,18 @@ export function FamilyClient({
 
   const handleRespondInvite = async (inviteId: string, accept: boolean) => {
     try {
-      const supabase = createClient();
-      await supabase
-        .from('family_members')
-        .update({
-          status: accept ? 'accepted' : 'declined',
-          member_id: currentUser.id,
-        })
-        .eq('id', inviteId);
+      const res = await fetch('/api/family/respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inviteId, accept }),
+      });
 
-      setPendingInvites(prev => prev.filter(inv => inv.id !== inviteId));
-      if (accept) {
-        alert(bt.family.acceptedSuccess);
+      if (res.ok) {
+        setPendingInvites(prev => prev.filter(inv => inv.id !== inviteId));
+        if (accept) {
+          alert(bt.family.acceptedSuccess);
+        }
+        router.refresh();
       }
     } catch {
       // ignore
@@ -245,39 +252,72 @@ export function FamilyClient({
               </div>
             </div>
 
-            {/* Invited members */}
-            {members.map(member => (
-              <div key={member.id} className={styles.memberCard}>
-                <div className={styles.memberAvatar} style={{ background: '#736F6E' }}>
-                  {member.member_email[0]?.toUpperCase() || 'M'}
-                </div>
-                <div className={styles.memberInfo}>
-                  <p className={styles.memberName}>{member.member_email}</p>
-                  <p className={styles.memberRole}>{member.role || (lang === 'vi' ? 'Người thân' : 'Family')}</p>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginTop: '0.25rem' }}>
-                    <span className={`${styles.memberStatus} ${member.status === 'accepted' ? styles.statusAccepted : styles.statusPending}`}>
-                      {member.status === 'accepted' ? `✓ ${bt.family.acceptedStatus}` : `⏳ ${bt.family.pendingStatus}`}
-                    </span>
-                    {member.status === 'pending' && (
-                      <button
-                        type="button"
-                        onClick={() => handleCancelInvite(member.id)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#DC2626',
-                          fontSize: '0.75rem',
-                          cursor: 'pointer',
-                          padding: '0.1rem 0.3rem',
-                        }}
-                      >
-                        {lang === 'vi' ? 'Hủy' : 'Cancel'}
-                      </button>
+            {/* Invited and Joined members */}
+            {members.map(member => {
+              const displayName = member.displayName || member.member_email;
+              const initial = displayName[0]?.toUpperCase() || 'M';
+              return (
+                <div key={member.id} className={styles.memberCard}>
+                  <div
+                    className={styles.memberAvatar}
+                    style={{ background: member.isOwner ? '#E8503A' : '#736F6E' }}
+                  >
+                    {member.avatarUrl ? (
+                      <img
+                        src={member.avatarUrl}
+                        alt={displayName}
+                        style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      initial
                     )}
                   </div>
+                  <div className={styles.memberInfo}>
+                    <p className={styles.memberName}>
+                      {displayName}
+                      {member.isOwner && (
+                        <span
+                          style={{
+                            fontSize: '0.725rem',
+                            fontWeight: 600,
+                            marginLeft: '0.35rem',
+                            color: '#E8503A',
+                            background: '#FFF2EE',
+                            padding: '0.15rem 0.45rem',
+                            borderRadius: '9999px',
+                            display: 'inline-block',
+                          }}
+                        >
+                          {lang === 'vi' ? 'Chủ phòng' : 'Host'}
+                        </span>
+                      )}
+                    </p>
+                    <p className={styles.memberRole}>{member.role || (lang === 'vi' ? 'Người thân' : 'Family')}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginTop: '0.25rem' }}>
+                      <span className={`${styles.memberStatus} ${member.status === 'accepted' ? styles.statusAccepted : styles.statusPending}`}>
+                        {member.status === 'accepted' ? `✓ ${bt.family.acceptedStatus}` : `⏳ ${bt.family.pendingStatus}`}
+                      </span>
+                      {member.status === 'pending' && !member.isOwner && (
+                        <button
+                          type="button"
+                          onClick={() => handleCancelInvite(member.id)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#DC2626',
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                            padding: '0.1rem 0.3rem',
+                          }}
+                        >
+                          {lang === 'vi' ? 'Hủy' : 'Cancel'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
