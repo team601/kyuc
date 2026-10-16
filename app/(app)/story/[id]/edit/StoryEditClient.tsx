@@ -8,6 +8,7 @@ import { backendTranslations } from '@/lib/translations';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { createClient } from '@/lib/supabase/client';
 import PhotoUploader from '@/components/story/PhotoUploader';
+import { mediaSrc, storagePathFrom } from '@/lib/media';
 import styles from './edit.module.css';
 
 interface Story {
@@ -97,7 +98,8 @@ export function StoryEditClient({ story }: { story: Story }) {
     try {
       const supabase = createClient();
 
-      let finalImageUrl = imageUrl || null;
+      // Stored as a storage path in the private photos bucket.
+      let finalImageUrl = storagePathFrom(imageUrl, 'photos') ?? (imageUrl || null);
 
       // Upload new photo if user selected one
       if (newPhotoFile) {
@@ -107,10 +109,14 @@ export function StoryEditClient({ story }: { story: Story }) {
           .from('photos')
           .upload(photoPath, newPhotoFile, { contentType: newPhotoFile.type });
 
-        if (!photoError && photoData) {
-          const { data: urlData } = supabase.storage.from('photos').getPublicUrl(photoData.path);
-          finalImageUrl = urlData.publicUrl;
+        if (photoError || !photoData) {
+          throw new Error(
+            lang === 'vi'
+              ? 'Không tải được ảnh lên. Câu chuyện chưa được lưu, vui lòng thử lại.'
+              : 'Photo upload failed. Your changes were not saved. Please try again.'
+          );
         }
+        finalImageUrl = photoData.path;
       } else if (photoRemoved) {
         finalImageUrl = null;
       }
@@ -244,7 +250,7 @@ export function StoryEditClient({ story }: { story: Story }) {
               {lang === 'vi' ? 'Ảnh kỷ niệm' : 'Cherished Photo'}
             </label>
             <PhotoUploader
-              initialPreview={imageUrl || undefined}
+              initialPreview={mediaSrc(imageUrl, 'photos') || undefined}
               onPhotoSelected={(file) => {
                 if (file) {
                   setNewPhotoFile(file);

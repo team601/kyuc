@@ -90,11 +90,11 @@ export function AudioPlayer({ src, title, className }: AudioPlayerProps) {
   };
 
   const handleAudioError = () => {
-    // If native playback fails (e.g. iOS Safari with WebM / bad Content-Type), try audio-proxy once!
-    if (!didRetryProxy && !currentSrc.includes('/api/audio-proxy')) {
+    // If native playback fails (e.g. iOS Safari with WebM / bad Content-Type), retry once via the
+    // media route's stream mode, which re-serves the bytes with a sniffed Content-Type.
+    if (!didRetryProxy && src.startsWith('/api/media?') && !currentSrc.includes('stream=1')) {
       setDidRetryProxy(true);
-      const proxyUrl = `/api/audio-proxy?url=${encodeURIComponent(src)}`;
-      setCurrentSrc(proxyUrl);
+      setCurrentSrc(`${src}&stream=1`);
       if (audioRef.current) {
         audioRef.current.load();
       }

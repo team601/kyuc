@@ -224,11 +224,19 @@ export function ProfileClient({
     setDeleting(true);
     setDeleteError('');
     try {
-      const supabase = createClient();
-      await supabase.from('stories').delete().eq('user_id', userId);
-      await supabase.from('family_members').delete().eq('owner_id', userId);
-      await supabase.from('profiles').delete().eq('id', userId);
-      await supabase.auth.signOut();
+      // Server route deletes recordings, photos and the account itself, and reports any failure.
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: deleteConfirmInput.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error === 'storage_delete_failed'
+          ? (lang === 'vi' ? 'Không xóa được tệp ghi âm/ảnh. Tài khoản chưa bị xóa, vui lòng thử lại.' : 'Could not delete your recordings and photos. Your account was not deleted. Please try again.')
+          : (lang === 'vi' ? 'Không xóa được tài khoản. Vui lòng thử lại hoặc liên hệ hỗ trợ.' : 'Could not delete your account. Please try again or contact support.'));
+      }
+      await createClient().auth.signOut();
       window.location.href = '/login?deleted=true';
     } catch (err: any) {
       setDeleteError(err.message || 'Error deleting account');
