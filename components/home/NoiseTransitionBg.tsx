@@ -17,7 +17,7 @@ interface Props {
   index: number;
 }
 
-const DURATION = 1400;
+const DURATION = 2800;
 
 const VERT = `
 attribute vec2 aPos;
@@ -72,8 +72,8 @@ void main() {
   vec2 uv = vUv;
   float aspect = uRes.x / uRes.y;
   float n = fbm(vec2(uv.x * aspect, uv.y) * 2.1 + uSeed);
-  float p = uP * 1.3 - 0.15;
-  float mask = 1.0 - smoothstep(p - 0.12, p + 0.12, n);
+  float p = uP * 1.5 - 0.25;
+  float mask = 1.0 - smoothstep(p - 0.2, p + 0.2, n);
   float edge = 1.0 - abs(mask * 2.0 - 1.0);
   vec2 warp = (vec2(fbm(uv * 3.0 + uSeed + 7.0), fbm(uv * 3.0 + uSeed + 3.0)) - 0.5) * edge * 0.045;
   vec3 a = tex(uA, cover(uv + warp, uSizeA, uFocusA), uSizeA, uBlurA);
@@ -90,7 +90,8 @@ function parseFocus(focus: string): [number, number] {
   return [parseFloat(x) / 100, 1 - parseFloat(y) / 100];
 }
 
-const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+// easeInOutSine: nhịp đều hơn cubic, mảng loang lan ra thấy rõ suốt quá trình
+const ease = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2;
 
 export function NoiseTransitionBg({ slides, index }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);

@@ -141,7 +141,7 @@
   max-width: none;
   height: calc(100% + 40px);
   object-fit: cover;
-  transition: opacity 1s ease;
+  transition: opacity 2s ease;
 }
 .heroTint {
   position: absolute;
