@@ -1,17 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HomeContent } from '@/lib/homeContent';
 import { NoiseTransitionBg, type BgSlide } from './NoiseTransitionBg';
 import { PhoneScreens } from './PhoneScreens';
 import { useHomeImages } from './HomeImage';
 import s from './home.module.css';
 
-/** Phần mở đầu: ảnh nền + điện thoại dính giữa màn hình, mỗi bước cuộn đổi ảnh nền và màn hình app. */
+/** Chiều cao cuộn cho mỗi bước, tính theo chiều cao màn hình */
+const STEP_VH = 0.9;
+
+/** Phần mở đầu: ảnh nền + điện thoại dính giữa màn hình. Ảnh nền chuyển theo đúng vị trí cuộn. */
 export function StoryStage({ t, startHref }: { t: HomeContent; startHref: string }) {
   const images = useHomeImages();
   const wrapRef = useRef<HTMLElement>(null);
+  const positionRef = useRef(0);
   const [step, setStep] = useState(0);
   const [scale, setScale] = useState(1);
   // vị trí điện thoại ở màn hero: đỉnh điện thoại nằm dưới tiêu đề, đè lên mép dưới ảnh
@@ -27,15 +31,15 @@ export function StoryStage({ t, startHref }: { t: HomeContent; startHref: string
     [images],
   );
 
+  const onStepChange = useCallback((next: number) => setStep(next), []);
+
   useEffect(() => {
     const onScroll = () => {
       const wrap = wrapRef.current;
       if (!wrap) return;
       const vh = window.innerHeight;
       const scrolled = -wrap.getBoundingClientRect().top;
-      let next = 0;
-      if (scrolled > vh * 0.3) next = Math.min(5, 1 + Math.floor((scrolled - vh * 0.3) / (vh * 0.9)));
-      setStep(next);
+      positionRef.current = Math.max(0, scrolled / (vh * STEP_VH));
     };
     const onResize = () => {
       const vh = window.innerHeight;
@@ -56,17 +60,16 @@ export function StoryStage({ t, startHref }: { t: HomeContent; startHref: string
   }, []);
 
   const active = step > 0 ? t.steps[step - 1] : null;
+  const dotsLight = !active || active.tone === 'light';
 
   return (
     <section ref={wrapRef} className={s.stageWrap} aria-label={t.hero.title}>
       <span id="how" className={s.howAnchor} />
       <div className={s.stage}>
-        <NoiseTransitionBg slides={slides} index={step} />
+        <NoiseTransitionBg slides={slides} positionRef={positionRef} onStepChange={onStepChange} />
         <div className={`${s.heroTint} ${step === 0 ? s.on : ''}`} aria-hidden="true" />
-        <div
-          className={`${s.scrim} ${active ? (active.side === 'left' ? s.scrimLeft : s.scrimRight) : ''}`}
-          aria-hidden="true"
-        />
+        {/* chỉ dùng trên mobile, nơi chữ nằm đè lên chủ thể ảnh */}
+        <div className={`${s.mobileShade} ${active ? s.on : ''}`} aria-hidden="true" />
 
         <div className={`${s.heroText} ${step === 0 ? s.on : ''}`}>
           <p className={s.pilot}>{t.hero.pilot}</p>
@@ -84,7 +87,7 @@ export function StoryStage({ t, startHref }: { t: HomeContent; startHref: string
         {t.steps.map((st, i) => (
           <div
             key={st.label}
-            className={`${s.stepText} ${st.side === 'left' ? s.stepLeft : s.stepRight} ${step === i + 1 ? s.on : ''}`}
+            className={`${s.stepText} ${st.side === 'left' ? s.stepLeft : s.stepRight} ${st.tone === 'light' ? s.toneLight : s.toneDark} ${step === i + 1 ? s.on : ''}`}
           >
             <span className={s.eyebrow}>{st.label}</span>
             <h2 className={s.stepTitle}>{st.title}</h2>
@@ -101,7 +104,7 @@ export function StoryStage({ t, startHref }: { t: HomeContent; startHref: string
           </div>
         ))}
 
-        <div className={s.dots} aria-hidden="true">
+        <div className={`${s.dots} ${dotsLight ? '' : s.dotsDark}`} aria-hidden="true">
           {[0, 1, 2, 3, 4, 5].map(i => (
             <span key={i} className={`${s.dot} ${step === i ? s.dotOn : ''}`} />
           ))}

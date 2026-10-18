@@ -151,15 +151,7 @@
   transition: opacity 0.9s ease;
   pointer-events: none;
 }
-.scrim {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity 0.9s ease, background 0.9s ease;
-  pointer-events: none;
-}
-.scrimLeft { opacity: 1; background: linear-gradient(90deg, rgba(250, 248, 245, 0.94) 0%, rgba(250, 248, 245, 0.72) 30%, rgba(250, 248, 245, 0) 55%); }
-.scrimRight { opacity: 1; background: linear-gradient(270deg, rgba(250, 248, 245, 0.94) 0%, rgba(250, 248, 245, 0.72) 30%, rgba(250, 248, 245, 0) 55%); }
+.mobileShade { display: none; }
 .on { opacity: 1 !important; transform: none !important; pointer-events: auto !important; }
 
 .heroText {
@@ -230,8 +222,17 @@
   color: var(--coral-dark);
 }
 .stepTitle { font-family: var(--display); font-weight: 400; font-size: clamp(30px, 3.2vw, 46px); line-height: 1.1; }
-.stepBody { color: var(--ink-soft); }
-.soon { color: var(--coral-dark); font-weight: 500; }
+.soon { font-weight: 500; }
+
+/* Màu chữ theo nền ảnh (không dùng mảng nền sau chữ) */
+.toneDark { color: var(--ink); text-shadow: 0 1px 20px rgba(255, 248, 240, 0.7), 0 0 2px rgba(255, 248, 240, 0.5); }
+.toneDark .eyebrow, .toneDark .soon { color: var(--coral-dark); }
+.toneDark .stepBody { color: #4A3830; }
+.toneLight { color: #FFF8F0; text-shadow: 0 1px 22px rgba(40, 24, 18, 0.6), 0 0 2px rgba(40, 24, 18, 0.5); }
+.toneLight .eyebrow, .toneLight .soon { color: #FFC9BC; }
+.toneLight .stepBody { color: rgba(255, 248, 240, 0.92); }
+.dotsDark .dot { background: rgba(58, 42, 36, 0.35); box-shadow: none; }
+.dotsDark .dotOn { background: var(--coral); }
 
 .dots {
   position: absolute;
@@ -433,17 +434,25 @@
     bottom: 20px;
     width: auto;
     transform: translateY(24px);
-    padding: 20px 22px;
-    border-radius: 26px;
-    background: rgba(250, 248, 245, 0.95);
-    box-shadow: 0 16px 40px rgba(58, 42, 36, 0.18);
     gap: 8px;
   }
   .stepText.on { transform: none !important; }
+  /* trên mobile chữ luôn đè lên ảnh nên dùng chữ sáng + bóng tối nhẹ ở đáy */
+  .toneDark { color: #FFF8F0; text-shadow: 0 1px 22px rgba(40, 24, 18, 0.6), 0 0 2px rgba(40, 24, 18, 0.5); }
+  .toneDark .eyebrow, .toneDark .soon { color: #FFC9BC; }
+  .toneDark .stepBody { color: rgba(255, 248, 240, 0.92); }
+  .mobileShade {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(0deg, rgba(40, 24, 18, 0.62) 0%, rgba(40, 24, 18, 0) 48%);
+    opacity: 0;
+    transition: opacity 0.9s ease;
+    pointer-events: none;
+  }
   .stepTitle { font-size: 24px; }
   .stepBody { font-size: 15px; }
   .phoneSlot { top: 34%; }
-  .scrimLeft, .scrimRight { background: linear-gradient(0deg, rgba(250, 248, 245, 0.85) 0%, rgba(250, 248, 245, 0) 45%); }
   .dots { right: 10px; }
   .heroText { top: 12vh; }
   .navLogin { display: none; }
@@ -464,5 +473,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .heroText, .stepText, .phoneSlot, .scrim, .heroTint, .bgImg, .dot { transition: none; }
+  .heroText, .stepText, .phoneSlot, .mobileShade, .heroTint, .bgImg, .dot { transition: none; }
 }

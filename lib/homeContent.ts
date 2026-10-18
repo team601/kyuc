@@ -10,24 +10,26 @@ export interface HomeStep {
   imageAlt: string;
   /** Phía hiển thị chữ; ảnh nền nên chừa trống phía này */
   side: 'left' | 'right';
+  /** Màu chữ theo độ sáng vùng trống của ảnh: 'light' = chữ sáng trên nền tối, 'dark' = chữ đậm trên nền sáng */
+  tone: 'light' | 'dark';
   /** object-position cho ảnh tạm, giữ chủ thể ở phía đối diện chữ */
   focus: string;
 }
 
 const steps = {
   en: [
-    { label: '01 · Set up', title: 'Start with the person, not the app.', body: 'Add their name, their language, and what the family calls them: Má, Ngoại, Grandma. Every question is written for them.', image: 'kyuc-step-1-setup', imageAlt: 'A granddaughter helping her grandmother with a phone at home', side: 'left', focus: '70% 50%' },
-    { label: '02 · Just talk', title: 'One question a week. One big button.', body: 'They tap and talk, at their own pace. Pause, listen back, or type instead. No right or wrong answers.', image: 'kyuc-step-2-talk', imageAlt: 'A grandfather telling a lively story to his grandson', side: 'right', focus: '40% 45%' },
-    { label: '03 · Gentle follow-ups', title: 'The details that make a memory vivid.', body: 'A follow-up drawn only from what they just said: the smell of the kitchen, the sound of the street. Skip anytime.', planned: true, image: 'kyuc-step-3-kitchen', imageAlt: 'A grandmother cooking in the kitchen with her granddaughter', side: 'left', focus: '70% 50%' },
-    { label: '04 · Review', title: 'Her words, made easy to read.', body: 'A clear story drafted from the real recording, always beside the original. Nothing is added, and nothing is shared until she approves it.', planned: true, image: 'kyuc-step-4-review', imageAlt: 'A smiling grandmother reading on a tablet', side: 'right', focus: '30% 45%' },
-    { label: '05 · Keep it in the family', title: 'A private archive the whole family can hear.', body: 'Invite children and grandchildren to listen, read, react and suggest the next question.', image: 'kyuc-step-5-family', imageAlt: 'A grandmother sharing a Lunar New Year meal with her granddaughter', side: 'left', focus: '65% 55%' },
+    { label: '01 · Set up', title: 'Start with the person, not the app.', body: 'Add their name, their language, and what the family calls them: Má, Ngoại, Grandma. Every question is written for them.', image: 'kyuc-step-1-setup', imageAlt: 'A granddaughter helping her grandmother with a phone at home', side: 'left', tone: 'dark', focus: '70% 50%' },
+    { label: '02 · Just talk', title: 'One question a week. One big button.', body: 'They tap and talk, at their own pace. Pause, listen back, or type instead. No right or wrong answers.', image: 'kyuc-step-2-talk', imageAlt: 'A grandfather telling a lively story to his grandson', side: 'right', tone: 'light', focus: '40% 45%' },
+    { label: '03 · Gentle follow-ups', title: 'The details that make a memory vivid.', body: 'A follow-up drawn only from what they just said: the smell of the kitchen, the sound of the street. Skip anytime.', planned: true, image: 'kyuc-step-3-kitchen', imageAlt: 'A grandmother cooking in the kitchen with her granddaughter', side: 'left', tone: 'dark', focus: '70% 50%' },
+    { label: '04 · Review', title: 'Her words, made easy to read.', body: 'A clear story drafted from the real recording, always beside the original. Nothing is added, and nothing is shared until she approves it.', planned: true, image: 'kyuc-step-4-review', imageAlt: 'A smiling grandmother reading on a tablet', side: 'right', tone: 'light', focus: '30% 45%' },
+    { label: '05 · Keep it in the family', title: 'A private archive the whole family can hear.', body: 'Invite children and grandchildren to listen, read, react and suggest the next question.', image: 'kyuc-step-5-family', imageAlt: 'A grandmother sharing a Lunar New Year meal with her granddaughter', side: 'left', tone: 'light', focus: '65% 55%' },
   ],
   vi: [
-    { label: '01 · Thiết lập', title: 'Bắt đầu từ người kể, không phải từ ứng dụng.', body: 'Nhập tên, ngôn ngữ và cách cả nhà vẫn gọi: Má, Ngoại, Bà. Mỗi câu hỏi đều được viết riêng cho họ.', image: 'kyuc-step-1-setup', imageAlt: 'Cháu gái chỉ bà cách dùng điện thoại ở nhà', side: 'left', focus: '70% 50%' },
-    { label: '02 · Cứ kể thôi', title: 'Mỗi tuần một câu hỏi. Một nút bấm thật to.', body: 'Chạm và kể, chậm rãi theo ý mình. Có thể tạm dừng, nghe lại hoặc viết thay vì nói. Không có câu trả lời đúng hay sai.', image: 'kyuc-step-2-talk', imageAlt: 'Ông say sưa kể chuyện cho cháu trai', side: 'right', focus: '40% 45%' },
-    { label: '03 · Hỏi thêm nhẹ nhàng', title: 'Những chi tiết làm ký ức sống lại.', body: 'Câu hỏi gợi mở dựa đúng vào điều vừa được kể: mùi gian bếp, tiếng ồn của con phố. Bỏ qua bất cứ lúc nào.', planned: true, image: 'kyuc-step-3-kitchen', imageAlt: 'Bà nấu ăn cùng cháu gái trong bếp', side: 'left', focus: '70% 50%' },
-    { label: '04 · Đọc lại', title: 'Lời kể của Má, dễ đọc hơn.', body: 'Một câu chuyện rõ ràng được soạn từ chính bản ghi âm, luôn nằm cạnh bản gốc. Không thêm thắt gì, và chưa chia sẻ cho đến khi Má đồng ý.', planned: true, image: 'kyuc-step-4-review', imageAlt: 'Bà mỉm cười đọc trên máy tính bảng', side: 'right', focus: '30% 45%' },
-    { label: '05 · Giữ trong gia đình', title: 'Kho ký ức riêng mà cả nhà cùng nghe được.', body: 'Mời con cháu cùng nghe, cùng đọc, thả cảm xúc và gợi ý câu hỏi tiếp theo.', image: 'kyuc-step-5-family', imageAlt: 'Bà và cháu cùng ăn bữa cơm Tết', side: 'left', focus: '65% 55%' },
+    { label: '01 · Thiết lập', title: 'Bắt đầu từ người kể, không phải từ ứng dụng.', body: 'Nhập tên, ngôn ngữ và cách cả nhà vẫn gọi: Má, Ngoại, Bà. Mỗi câu hỏi đều được viết riêng cho họ.', image: 'kyuc-step-1-setup', imageAlt: 'Cháu gái chỉ bà cách dùng điện thoại ở nhà', side: 'left', tone: 'dark', focus: '70% 50%' },
+    { label: '02 · Cứ kể thôi', title: 'Mỗi tuần một câu hỏi. Một nút bấm thật to.', body: 'Chạm và kể, chậm rãi theo ý mình. Có thể tạm dừng, nghe lại hoặc viết thay vì nói. Không có câu trả lời đúng hay sai.', image: 'kyuc-step-2-talk', imageAlt: 'Ông say sưa kể chuyện cho cháu trai', side: 'right', tone: 'light', focus: '40% 45%' },
+    { label: '03 · Hỏi thêm nhẹ nhàng', title: 'Những chi tiết làm ký ức sống lại.', body: 'Câu hỏi gợi mở dựa đúng vào điều vừa được kể: mùi gian bếp, tiếng ồn của con phố. Bỏ qua bất cứ lúc nào.', planned: true, image: 'kyuc-step-3-kitchen', imageAlt: 'Bà nấu ăn cùng cháu gái trong bếp', side: 'left', tone: 'dark', focus: '70% 50%' },
+    { label: '04 · Đọc lại', title: 'Lời kể của Má, dễ đọc hơn.', body: 'Một câu chuyện rõ ràng được soạn từ chính bản ghi âm, luôn nằm cạnh bản gốc. Không thêm thắt gì, và chưa chia sẻ cho đến khi Má đồng ý.', planned: true, image: 'kyuc-step-4-review', imageAlt: 'Bà mỉm cười đọc trên máy tính bảng', side: 'right', tone: 'light', focus: '30% 45%' },
+    { label: '05 · Giữ trong gia đình', title: 'Kho ký ức riêng mà cả nhà cùng nghe được.', body: 'Mời con cháu cùng nghe, cùng đọc, thả cảm xúc và gợi ý câu hỏi tiếp theo.', image: 'kyuc-step-5-family', imageAlt: 'Bà và cháu cùng ăn bữa cơm Tết', side: 'left', tone: 'light', focus: '65% 55%' },
   ],
 } satisfies Record<Language, HomeStep[]>;
 
