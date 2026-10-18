@@ -40,6 +40,7 @@ uniform float uBlurA;
 uniform float uBlurB;
 uniform float uP;
 uniform float uSeed;
+uniform float uTime;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
@@ -71,11 +72,14 @@ vec3 tex(sampler2D t, vec2 uv, vec2 size, float blur) {
 void main() {
   vec2 uv = vUv;
   float aspect = uRes.x / uRes.y;
-  float n = fbm(vec2(uv.x * aspect, uv.y) * 2.1 + uSeed);
-  float p = uP * 1.5 - 0.25;
-  float mask = 1.0 - smoothstep(p - 0.2, p + 0.2, n);
+  // noise trôi nhẹ lên trên trong lúc chuyển để mép loang "sống" như mảng hữu cơ
+  float n = fbm(vec2(uv.x * aspect, uv.y) * 2.1 + vec2(0.0, -uTime * 0.18) + uSeed);
+  // trường quét từ dưới lên: đáy màn hình lộ ảnh mới trước, mép là các mảng noise
+  float field = uv.y * 0.7 + (n - 0.5) * 0.5 + 0.25;
+  float p = uP * 1.34 - 0.08;
+  float mask = 1.0 - smoothstep(p - 0.15, p + 0.15, field);
   float edge = 1.0 - abs(mask * 2.0 - 1.0);
-  vec2 warp = (vec2(fbm(uv * 3.0 + uSeed + 7.0), fbm(uv * 3.0 + uSeed + 3.0)) - 0.5) * edge * 0.045;
+  vec2 warp = (vec2(fbm(uv * 3.0 + uSeed + 7.0), fbm(uv * 3.0 + uSeed + 3.0)) - 0.5) * edge * 0.045 + vec2(0.0, edge * 0.02);
   vec3 a = tex(uA, cover(uv + warp, uSizeA, uFocusA), uSizeA, uBlurA);
   vec3 b = tex(uB, cover(uv - warp, uSizeB, uFocusB), uSizeB, uBlurB);
   vec3 col = mix(a, b, mask);
@@ -154,7 +158,8 @@ export function NoiseTransitionBg({ slides, index }: Props) {
     let raf = 0;
     let seed = Math.random() * 10;
 
-    const draw = (p: number) => {
+    const draw = (p: number, time = 0) => {
+      gl.uniform1f(u('uTime'), time);
       gl.uniform2f(u('uRes'), canvas.width, canvas.height);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, textures[from]);
@@ -173,7 +178,7 @@ export function NoiseTransitionBg({ slides, index }: Props) {
 
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / DURATION);
-      draw(ease(t));
+      draw(ease(t), (now - start) / 1000);
       if (t < 1) {
         raf = requestAnimationFrame(tick);
       } else {
@@ -193,7 +198,6 @@ export function NoiseTransitionBg({ slides, index }: Props) {
       raf = requestAnimationFrame(tick);
     };
     apiRef.current = { go };
-
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       canvas.width = Math.round(canvas.clientWidth * dpr);
