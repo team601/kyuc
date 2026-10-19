@@ -18,7 +18,7 @@ const END = 0.95;
 /** Hệ số làm mượt theo quán tính (càng nhỏ càng trễ, càng mượt) */
 const SMOOTH = 0.09;
 /** Giới hạn độ phân giải texture để tiết kiệm bộ nhớ GPU */
-const MAX_TEX = 2200;
+const MAX_TEX = 3200;
 
 const VERT = `
 attribute vec2 aPos;
@@ -57,19 +57,19 @@ float noise(vec2 p) {
 float bayer2(vec2 a) { a = floor(a); return fract(a.x / 2.0 + a.y * a.y * 0.75); }
 float bayer4(vec2 a) { return bayer2(0.5 * a) * 0.25 + bayer2(a); }
 float bayer8(vec2 a) { return bayer4(0.5 * a) * 0.25 + bayer2(a); }
+// làm mờ mịn: 32 mẫu xếp theo xoắn ốc góc vàng, không bị vệt ô như box blur thưa
 vec3 blurred(sampler2D t, vec2 uv, float radius) {
   if (radius < 0.75) return texture2D(t, uv).rgb;
-  vec2 px = radius / uRes;
   vec3 c = vec3(0.0);
-  for (int x = -2; x <= 2; x++) {
-    for (int y = -2; y <= 2; y++) {
-      c += texture2D(t, uv + vec2(float(x), float(y)) * px * 0.5).rgb;
-    }
+  for (int i = 0; i < 32; i++) {
+    float fi = float(i);
+    float r = sqrt((fi + 0.5) / 32.0) * radius;
+    float a = fi * 2.39996;
+    c += texture2D(t, uv + vec2(cos(a), sin(a)) * r / uRes).rgb;
   }
-  return c / 25.0;
+  return c / 32.0;
 }
 void main() {
-  float intensity = sin(3.14159 * uP);
 
   // lưới chấm 2px (theo px CSS), gốc ở đáy màn hình
   float dotPx = DOT * uDpr;
@@ -87,10 +87,8 @@ void main() {
   float g = (uP - t) / BAND;
   float mask = (g >= 1.0 || (g > 0.0 && g > bayer8(cell))) ? 1.0 : 0.0;
 
-  // khung đang rời đi: vỡ thành chấm và mờ dần theo mức cuộn
-  vec2 uvDot = (cell + 0.5) * dotPx / uRes;
-  vec2 uvA = intensity > 0.001 ? uvDot : vUv;
-  vec3 a = blurred(uA, uvA, uP * 14.0 * uDpr);
+  // khung đang rời đi: chỉ mờ mịn dần theo mức cuộn (chấm 2px chỉ dùng làm mặt nạ lật sang khung mới)
+  vec3 a = blurred(uA, vUv, uP * 14.0 * uDpr);
   // khung đang hiện ra: luôn nét
   vec3 b = texture2D(uB, vUv).rgb;
   gl_FragColor = vec4(mix(a, b, mask), 1.0);
@@ -268,7 +266,7 @@ export function NoiseTransitionBg({ slides, positionRef, onStepChange }: Props) 
 
     let resizeTimer = 0;
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const cw = canvas.clientWidth;
       const ch = canvas.clientHeight;
       scale = Math.min(dpr, MAX_TEX / Math.max(cw, ch, 1));
