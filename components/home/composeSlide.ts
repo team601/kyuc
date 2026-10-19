@@ -158,6 +158,9 @@ export function composeSlide(
         t.filter = `blur(${22 * k}px)`;
         drawCover(t, img, w, h, slide.focus, 60 * k);
         t.filter = 'none';
+        // phủ tối ấm nhẹ lên vùng mờ để chữ sáng luôn đọc rõ
+        t.fillStyle = 'rgba(40, 24, 18, 0.32)';
+        t.fillRect(0, 0, w, h);
         t.globalCompositeOperation = 'destination-in';
         const edge = slide.side === 'left' ? (boxX + boxW + 60) * k : (boxX - 60) * k;
         const fade = 260 * k;
