@@ -193,7 +193,7 @@ export function composeSlide(
       const ph = 34;
       ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
       ctx.beginPath();
-      ctx.roundRect((cssW - pw) / 2 * k, y * k, pw * k, ph * k, (ph / 2) * k);
+      ctx.roundRect((cssW - pw) / 2 * k, y * k, pw * k, ph * k, 4 * k);
       ctx.fill();
       ctx.fillStyle = '#FFFFFF';
       ctx.textAlign = 'center';
