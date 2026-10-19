@@ -9,7 +9,9 @@ import { useHomeImages } from './HomeImage';
 import s from './home.module.css';
 
 /** Chiều cao cuộn cho mỗi bước, tính theo chiều cao màn hình */
-const STEP_VH = 0.9;
+const STEP_VH = 1.5;
+/** Tốc độ điện thoại trôi ra ở bước cuối so với tốc độ cuộn */
+const EXIT_SPEED = 1.6;
 
 /**
  * Phần mở đầu: các khung ảnh (ảnh + chữ vẽ chung) chuyển theo vị trí cuộn, điện thoại dính giữa màn hình.
@@ -64,10 +66,10 @@ export function StoryStage({ t }: { t: HomeContent }) {
       positionRef.current = Math.max(0, scrolled / (vh * STEP_VH));
 
       // điện thoại đi đúng theo cuộn: trôi lên cùng trang từ hero tới giữa màn hình rồi dính lại,
-      // và ở bước cuối lại trôi lên theo trang mà ra khỏi màn hình
+      // và ở bước cuối lại trôi lên ra khỏi màn hình, nhanh hơn trang để section bên dưới không dính sát điện thoại
       const exitStart = t.steps.length * STEP_VH * vh;
       let offset = Math.max(0, geo.heroOffset - Math.max(0, scrolled));
-      if (scrolled > exitStart) offset = -(scrolled - exitStart);
+      if (scrolled > exitStart) offset = -(scrolled - exitStart) * EXIT_SPEED;
       const phone = phoneRef.current;
       if (phone) phone.style.transform = `translate(-50%, -50%) translateY(${offset}px) scale(${geo.scale})`;
     };
