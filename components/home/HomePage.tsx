@@ -35,7 +35,8 @@ export default function HomePage({ images }: { images: Record<string, string> })
   );
 }
 
-function HomeNav({ t }: { t: HomeContent }) {
+// solid: dùng trên các trang khác (nền kem, chữ nâu), link mục trỏ về trang chủ
+export function HomeNav({ t, solid = false }: { t: HomeContent; solid?: boolean }) {
   const { lang, setLang } = useLanguage();
   const [loggedIn, setLoggedIn] = useState(false);
   const [open, setOpen] = useState(false);
@@ -51,17 +52,18 @@ function HomeNav({ t }: { t: HomeContent }) {
     }
   }, []);
 
+  const base = solid ? '/' : '';
   const links = (
     <>
-      <a href="#how" onClick={() => setOpen(false)}>{t.nav.how}</a>
-      <a href="#keep" onClick={() => setOpen(false)}>{t.nav.keep}</a>
-      <a href="#story" onClick={() => setOpen(false)}>{t.nav.story}</a>
-      <a href="#faq" onClick={() => setOpen(false)}>{t.nav.faq}</a>
+      <a href={`${base}#how`} onClick={() => setOpen(false)}>{t.nav.how}</a>
+      <a href={`${base}#keep`} onClick={() => setOpen(false)}>{t.nav.keep}</a>
+      <a href={`${base}#story`} onClick={() => setOpen(false)}>{t.nav.story}</a>
+      <a href={`${base}#faq`} onClick={() => setOpen(false)}>{t.nav.faq}</a>
     </>
   );
 
   return (
-    <header className={s.nav}>
+    <header className={solid ? `${s.nav} ${s.navSolid}` : s.nav}>
       <div className={s.navInner}>
         {/* Chỗ đặt logo: thay khi có logo chính thức */}
         <Link href="/" className={s.logo} aria-label="kyuc.ai home">kyuc<span>.ai</span></Link>
@@ -282,7 +284,7 @@ function Closing({ t }: { t: HomeContent }) {
   );
 }
 
-function HomeFooter({ t }: { t: HomeContent }) {
+export function HomeFooter({ t }: { t: HomeContent }) {
   return (
     <footer className={s.footer}>
       <div className={s.footerInner}>

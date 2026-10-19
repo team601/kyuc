@@ -1,6 +1,6 @@
 .page {
   min-height: 100vh;
-  background: var(--color-cream, #FAF7F2);
+  background: var(--color-cream, var(--color-cream));
 }
 
 .header {
@@ -9,33 +9,32 @@
   justify-content: space-between;
   padding: 1.25rem 2rem;
   background: #ffffff;
-  border-bottom: 1px solid var(--color-border-light, #F0EAE1);
+  border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
 }
 
 .back {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--color-muted, #736F6E);
+  color: var(--color-muted, var(--color-muted));
   text-decoration: none;
 }
-.back:hover { color: var(--color-ink, #1F1E1D); }
+.back:hover { color: var(--color-ink, var(--color-ink)); }
 
 .logo {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--color-ink, #1F1E1D);
+  gap: 0;
+  color: var(--color-ink, var(--color-ink));
   text-decoration: none;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
-.logo sup {
-  font-size: 0.5em;
-  color: var(--color-brand, #E8503A);
-  vertical-align: super;
-  line-height: 0;
+.logo span {
+  color: var(--color-brand-light);
 }
 
 .headerRight {
@@ -67,23 +66,24 @@
 }
 
 .heroTitle {
+  font-family: var(--font-serif);
   font-size: clamp(2rem, 4vw, 2.5rem);
-  font-weight: 800;
-  color: var(--color-ink, #1F1E1D);
-  letter-spacing: -0.025em;
+  font-weight: 400;
+  color: var(--color-ink, var(--color-ink));
+  letter-spacing: -0.005em;
 }
 
 .heroSub {
   font-size: 1rem;
-  color: var(--color-muted, #736F6E);
+  color: var(--color-muted, var(--color-muted));
   max-width: 520px;
   line-height: 1.6;
 }
 
 /* Pending Invite Banner */
 .inviteBanner {
-  background: #EFF6FF;
-  border: 1px solid #BFDBFE;
+  background: var(--color-mint);
+  border: none;
   border-radius: var(--radius-xl, 1rem);
   padding: 1.5rem;
   display: flex;
@@ -94,15 +94,16 @@
 }
 
 .inviteBannerText h4 {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #1E3A8A;
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--color-ink);
   margin-bottom: 0.25rem;
 }
 
 .inviteBannerText p {
   font-size: 0.875rem;
-  color: #3B82F6;
+  color: var(--color-teal);
 }
 
 .inviteBannerActions {
@@ -111,7 +112,7 @@
 }
 
 .acceptBtn {
-  background: #2563EB;
+  background: var(--color-teal);
   color: white;
   border: none;
   padding: 0.5rem 1.25rem;
@@ -123,8 +124,8 @@
 
 .declineBtn {
   background: white;
-  color: #64748B;
-  border: 1px solid #CBD5E1;
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
   padding: 0.5rem 1rem;
   border-radius: var(--radius-md, 0.5rem);
   font-size: 0.875rem;
@@ -145,10 +146,11 @@
 }
 
 .sectionTitle {
+  font-family: var(--font-serif);
   font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--color-ink, #1F1E1D);
-  letter-spacing: -0.01em;
+  font-weight: 400;
+  color: var(--color-ink, var(--color-ink));
+  letter-spacing: -0.005em;
 }
 
 .membersGrid {
@@ -159,7 +161,7 @@
 
 .memberCard {
   background: #ffffff;
-  border: 1px solid var(--color-border-light, #F0EAE1);
+  border: 1px solid var(--color-border-light, var(--color-border-light));
   border-radius: var(--radius-xl, 1rem);
   padding: 1.25rem;
   display: flex;
@@ -171,7 +173,7 @@
 .memberAvatar {
   width: 48px;
   height: 48px;
-  background: var(--color-brand, #E8503A);
+  background: var(--color-brand, var(--color-brand));
   color: white;
   border-radius: 50%;
   display: flex;
@@ -190,7 +192,7 @@
 .memberName {
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--color-ink, #1F1E1D);
+  color: var(--color-ink, var(--color-ink));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -198,7 +200,7 @@
 
 .memberRole {
   font-size: 0.8rem;
-  color: var(--color-brand, #E8503A);
+  color: var(--color-brand, var(--color-brand));
   font-weight: 600;
 }
 
@@ -229,7 +231,7 @@
 
 .emptyState {
   background: white;
-  border: 1px dashed var(--color-border, #E5DFD7);
+  border: 1px dashed var(--color-border, var(--color-border));
   border-radius: var(--radius-xl, 1rem);
   padding: 3rem 1.5rem;
   text-align: center;
@@ -245,7 +247,7 @@
 
 .emptyText {
   font-size: 0.95rem;
-  color: var(--color-muted, #736F6E);
+  color: var(--color-muted, var(--color-muted));
   max-width: 380px;
   line-height: 1.6;
 }
@@ -276,14 +278,15 @@
 }
 
 .modalTitle {
+  font-family: var(--font-serif);
   font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--color-ink, #1F1E1D);
+  font-weight: 400;
+  color: var(--color-ink, var(--color-ink));
 }
 
 .modalDesc {
   font-size: 0.875rem;
-  color: var(--color-muted, #736F6E);
+  color: var(--color-muted, var(--color-muted));
   line-height: 1.5;
 }
 

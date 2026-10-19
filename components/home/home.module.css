@@ -105,6 +105,11 @@
   font-size: 14px;
   cursor: pointer;
 }
+.navSolid { position: relative; color: var(--ink); background: var(--cream); border-bottom: 1px solid var(--sand-2); }
+.navSolid .navLinks a, .navSolid .navLogin { color: var(--ink); }
+.navSolid .langSwitch { background: var(--sand); backdrop-filter: none; }
+.navSolid .langSwitch button { color: var(--ink); }
+.navSolid .menuBtn { color: var(--ink); border-color: var(--sand-2); }
 .mobileMenu {
   margin: 0 16px;
   padding: 12px;

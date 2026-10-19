@@ -170,13 +170,10 @@ export function StoryEditClient({ story }: { story: Story }) {
     <div className={styles.page}>
       <header className={styles.header}>
         <Link href={`/story/${story.id}`} className={styles.back}>
-          ← {bt.story.backToDashboard}
+          {bt.story.backToDashboard}
         </Link>
         <Link href="/" className={styles.logo}>
-          <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
-            <path d="M6 4v20M6 14L20 6M6 14L20 22" stroke="#E8503A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span>kyuc<sup>°</sup></span>
+          kyuc<span>.ai</span>
         </Link>
         <LanguageSwitcher />
       </header>

@@ -13,10 +13,14 @@ html {
 }
 
 body {
+  /* next/font gắn --font-body/--font-display lên body, nên token font phải khai báo ở đây */
+  --font-sans: var(--font-body), system-ui, sans-serif;
+  --font-serif: var(--font-display), Georgia, serif;
   font-family: var(--font-sans);
   font-size: var(--text-base);
+  font-weight: 300;
   color: var(--color-ink);
-  background-color: var(--color-white);
+  background-color: var(--color-cream);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -64,8 +68,9 @@ a {
   gap: var(--space-2);
   padding: var(--space-3) var(--space-6);
   border: none;
-  border-radius: var(--radius-full);
-  font-weight: var(--font-semibold);
+  min-height: 48px;
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-medium);
   font-size: var(--text-base);
   cursor: pointer;
   transition: all var(--transition-base);
@@ -79,8 +84,6 @@ a {
 }
 .btn-primary:hover {
   background: var(--color-brand-dark);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(232, 80, 58, 0.35);
 }
 
 .btn-secondary {
@@ -89,7 +92,6 @@ a {
 }
 .btn-secondary:hover {
   background: var(--color-ink-soft);
-  transform: translateY(-1px);
 }
 
 .btn-ghost {
@@ -113,11 +115,13 @@ a {
 }
 
 .btn-lg {
+  min-height: 56px;
   padding: var(--space-4) var(--space-8);
   font-size: var(--text-lg);
 }
 
 .btn-sm {
+  min-height: 40px;
   padding: var(--space-2) var(--space-4);
   font-size: var(--text-sm);
 }
@@ -137,7 +141,7 @@ a {
 
 .form-input:focus, .form-textarea:focus {
   border-color: var(--color-brand);
-  box-shadow: 0 0 0 3px rgba(232, 80, 58, 0.12);
+  box-shadow: 0 0 0 3px rgba(232, 80, 58, 0.16);
 }
 
 .form-textarea {
@@ -153,6 +157,13 @@ a {
   color: var(--color-ink-soft);
   margin-bottom: var(--space-2);
 }
+
+a:focus-visible, button:focus-visible, summary:focus-visible {
+  outline: 3px solid var(--color-brand-light);
+  outline-offset: 3px;
+}
+
+h1, h2, h3 { font-weight: 400; }
 
 /* ─── Card ─── */
 .card {

@@ -302,10 +302,7 @@ export function FamilyClient({
           {bt.family.backToDashboard}
         </Link>
         <Link href="/" className={styles.logo}>
-          <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
-            <path d="M6 4v20M6 14L20 6M6 14L20 22" stroke="#E8503A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span>kyuc<sup>°</sup></span>
+          kyuc<span>.ai</span>
         </Link>
         <div className={styles.headerRight}>
           <LanguageSwitcher />
@@ -401,7 +398,7 @@ export function FamilyClient({
                 <div key={member.id} className={styles.memberCard}>
                   <div
                     className={styles.memberAvatar}
-                    style={{ background: member.isOwner ? '#E8503A' : '#736F6E' }}
+                    style={{ background: member.isOwner ? 'var(--color-brand)' : 'var(--color-muted)' }}
                   >
                     {member.avatarUrl ? (
                       <img
@@ -422,7 +419,7 @@ export function FamilyClient({
                             fontSize: '0.725rem',
                             fontWeight: 600,
                             marginLeft: '0.35rem',
-                            color: '#E8503A',
+                            color: 'var(--color-brand)',
                             background: '#FFF2EE',
                             padding: '0.15rem 0.45rem',
                             borderRadius: '9999px',
@@ -579,7 +576,7 @@ export function FamilyClient({
                   )}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid #F4EFEA', fontSize: '0.75rem', color: 'var(--color-subtle)' }}>
                     <span>{new Date(story.created_at).toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', { month: 'short', day: 'numeric' })}</span>
-                    {story.audio_url && <span style={{ color: '#E8503A', fontWeight: 600 }}>🎙 Đã ghi âm</span>}
+                    {story.audio_url && <span style={{ color: 'var(--color-brand)', fontWeight: 600 }}>🎙 Đã ghi âm</span>}
                   </div>
                 </Link>
               ))}
@@ -680,15 +677,15 @@ export function FamilyClient({
                     height: 72,
                     borderRadius: '50%',
                     overflow: 'hidden',
-                    background: '#E8503A',
+                    background: 'var(--color-brand)',
                     color: 'white',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '1.75rem',
                     fontWeight: 700,
-                    border: '3px solid #FAF7F2',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    border: '3px solid var(--color-cream)',
+                    boxShadow: '0 2px 8px rgba(58,42,36,0.1)',
                   }}
                 >
                   {editAvatarPreview ? (

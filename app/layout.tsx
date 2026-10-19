@@ -1,22 +1,7 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Lora, Prata, Lexend } from "next/font/google";
+import { Prata, Lexend } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/LanguageContext";
-
-const plusJakartaSans = Plus_Jakarta_Sans({
-  subsets: ['latin', 'vietnamese'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-sans',
-  display: 'swap',
-});
-
-const lora = Lora({
-  subsets: ['latin', 'vietnamese'],
-  weight: ['400', '500'],
-  style: ['normal', 'italic'],
-  variable: '--font-serif',
-  display: 'swap',
-});
 
 const prata = Prata({
   subsets: ['latin', 'vietnamese'],
@@ -126,7 +111,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className={`${plusJakartaSans.variable} ${lora.variable} ${prata.variable} ${lexend.variable}`}>
+      <body className={`${prata.variable} ${lexend.variable}`}>
         <LanguageProvider>
           {children}
         </LanguageProvider>

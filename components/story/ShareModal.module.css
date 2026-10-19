@@ -48,15 +48,16 @@
 }
 
 .title {
+  font-family: var(--font-serif);
   font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--color-ink, #1F1E1D);
+  font-weight: 400;
+  color: var(--color-ink, var(--color-ink));
   margin-bottom: 0.35rem;
 }
 
 .desc {
   font-size: 0.85rem;
-  color: var(--color-muted, #736F6E);
+  color: var(--color-muted, var(--color-muted));
   line-height: 1.5;
 }
 
@@ -64,7 +65,7 @@
   background: transparent;
   border: none;
   font-size: 1.25rem;
-  color: var(--color-muted, #736F6E);
+  color: var(--color-muted, var(--color-muted));
   cursor: pointer;
   padding: 0.25rem 0.5rem;
   border-radius: 9999px;
@@ -73,7 +74,7 @@
 
 .closeBtn:hover {
   background: var(--color-warm-beige, #F4EFEA);
-  color: var(--color-ink, #1F1E1D);
+  color: var(--color-ink, var(--color-ink));
 }
 
 /* Visibility Selector Options */
@@ -97,17 +98,17 @@
 
 .visibilityOption:hover {
   border-color: #D6CEC5;
-  background: #FAF7F2;
+  background: var(--color-cream);
 }
 
 .visibilityOptionSelected {
-  border-color: var(--color-brand, #E8503A) !important;
+  border-color: var(--color-brand, var(--color-brand)) !important;
   background: #FFF7F5 !important;
 }
 
 .visibilityOption input[type="radio"] {
   margin-top: 0.25rem;
-  accent-color: var(--color-brand, #E8503A);
+  accent-color: var(--color-brand, var(--color-brand));
 }
 
 .visibilityContent {
@@ -119,7 +120,7 @@
 .visibilityLabel {
   font-size: 0.9rem;
   font-weight: 700;
-  color: var(--color-ink, #1F1E1D);
+  color: var(--color-ink, var(--color-ink));
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -127,7 +128,7 @@
 
 .visibilityDesc {
   font-size: 0.775rem;
-  color: #736F6E;
+  color: var(--color-muted);
   line-height: 1.4;
 }
 
@@ -161,8 +162,8 @@
 .linkBox {
   display: flex;
   gap: 0.5rem;
-  background: var(--color-cream, #FAF7F2);
-  border: 1px solid var(--color-border, #E5DFD7);
+  background: var(--color-cream, var(--color-cream));
+  border: 1px solid var(--color-border, var(--color-border));
   padding: 0.5rem 0.75rem;
   border-radius: var(--radius-lg, 0.75rem);
   align-items: center;
@@ -173,14 +174,14 @@
   background: transparent;
   border: none;
   font-size: 0.85rem;
-  color: var(--color-ink, #1F1E1D);
+  color: var(--color-ink, var(--color-ink));
   outline: none;
   text-overflow: ellipsis;
   font-family: inherit;
 }
 
 .copyBtn {
-  background: var(--color-brand, #E8503A);
+  background: var(--color-brand, var(--color-brand));
   color: white;
   border: none;
   padding: 0.5rem 1rem;
@@ -193,7 +194,7 @@
 }
 
 .copyBtn:hover {
-  background: #D43E29;
+  background: var(--color-brand-dark);
 }
 
 .copyBtn.copied {
@@ -223,17 +224,17 @@
   border-radius: var(--radius-md, 0.5rem);
   font-size: 0.85rem;
   font-weight: 600;
-  border: 1px solid var(--color-border, #E5DFD7);
+  border: 1px solid var(--color-border, var(--color-border));
   background: white;
   cursor: pointer;
   text-decoration: none;
-  color: var(--color-ink, #1F1E1D);
+  color: var(--color-ink, var(--color-ink));
   transition: all 0.15s ease;
 }
 
 .socialBtn:hover {
   background: var(--color-warm-beige, #F4EFEA);
-  border-color: #D1C7BA;
+  border-color: var(--color-border);
 }
 
 .nativeShareBtn {
@@ -243,7 +244,7 @@
   justify-content: center;
   gap: 0.5rem;
   padding: 0.75rem;
-  background: var(--color-ink, #1F1E1D);
+  background: var(--color-ink, var(--color-ink));
   color: white;
   border: none;
   border-radius: var(--radius-md, 0.5rem);
