@@ -20,9 +20,7 @@ export function StoryStage({ t }: { t: HomeContent }) {
   const wrapRef = useRef<HTMLElement>(null);
   const positionRef = useRef(0);
   const [step, setStep] = useState(0);
-  const [scale, setScale] = useState(1);
-  // vị trí điện thoại ở màn hero: đỉnh điện thoại nằm dưới tiêu đề, đè lên mép dưới ảnh
-  const [heroOffset, setHeroOffset] = useState(0);
+  const phoneRef = useRef<HTMLDivElement>(null);
 
   const slides = useMemo<StageSlide[]>(
     () => [
@@ -56,20 +54,29 @@ export function StoryStage({ t }: { t: HomeContent }) {
   const onStepChange = useCallback((next: number) => setStep(next), []);
 
   useEffect(() => {
+    // kích thước điện thoại + vị trí ở màn hero (đỉnh điện thoại nằm dưới tiêu đề)
+    const geo = { scale: 1, heroOffset: 0 };
     const onScroll = () => {
       const wrap = wrapRef.current;
       if (!wrap) return;
       const vh = window.innerHeight;
       const scrolled = -wrap.getBoundingClientRect().top;
       positionRef.current = Math.max(0, scrolled / (vh * STEP_VH));
+
+      // điện thoại đi đúng theo cuộn: trôi lên cùng trang từ hero tới giữa màn hình rồi dính lại,
+      // và ở bước cuối lại trôi lên theo trang mà ra khỏi màn hình
+      const exitStart = t.steps.length * STEP_VH * vh;
+      let offset = Math.max(0, geo.heroOffset - Math.max(0, scrolled));
+      if (scrolled > exitStart) offset = -(scrolled - exitStart);
+      const phone = phoneRef.current;
+      if (phone) phone.style.transform = `translate(-50%, -50%) translateY(${offset}px) scale(${geo.scale})`;
     };
     const onResize = () => {
       const vh = window.innerHeight;
       const mobile = window.innerWidth < 900;
-      const sc = mobile ? Math.min(0.72, (vh - 330) / 660) : Math.min(1, (vh - 120) / 660);
-      setScale(sc);
+      geo.scale = mobile ? Math.min(0.72, (vh - 330) / 660) : Math.min(1, (vh - 120) / 660);
       const center = mobile ? vh * 0.34 : vh * 0.5;
-      setHeroOffset(vh * (mobile ? 0.5 : 0.56) + 330 * sc - center);
+      geo.heroOffset = vh * (mobile ? 0.5 : 0.56) + 330 * geo.scale - center;
       onScroll();
     };
     onResize();
@@ -79,6 +86,8 @@ export function StoryStage({ t }: { t: HomeContent }) {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onResize);
     };
+    // số bước cố định theo nội dung
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const exiting = step > t.steps.length;
@@ -103,13 +112,7 @@ export function StoryStage({ t }: { t: HomeContent }) {
           ))}
         </div>
 
-        <div
-          className={s.phoneSlot}
-          style={{
-            transform: `translate(-50%, -50%) translateY(${step === 0 ? `${heroOffset}px` : exiting ? '-40vh' : '0px'}) scale(${scale})`,
-            opacity: exiting ? 0 : 1,
-          }}
-        >
+        <div ref={phoneRef} className={s.phoneSlot}>
           <PhoneScreens step={Math.min(step, t.steps.length)} t={t.phone} />
         </div>
 
