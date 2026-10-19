@@ -2,7 +2,8 @@
 // Chữ được vẽ chung vào ảnh để hiệu ứng chuyển cảnh (dâng lên, vỡ pixel, mờ) phủ lên cả chữ.
 
 export interface StageSlide {
-  kind: 'hero' | 'step';
+  /** 'blank' = nền kem trơn của section kế tiếp, để đoạn sticky kết thúc bằng hiệu ứng chấm pixel */
+  kind: 'hero' | 'step' | 'blank';
   src: string;
   /** object-position kiểu CSS, ví dụ "70% 40%" */
   focus: string;
@@ -92,8 +93,12 @@ export function composeSlide(
 
   ctx.save();
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = '#F2EDE6';
+  ctx.fillStyle = slide.kind === 'blank' ? '#FAF8F5' : '#F2EDE6';
   ctx.fillRect(0, 0, w, h);
+  if (slide.kind === 'blank') {
+    ctx.restore();
+    return;
+  }
 
   if (img) {
     if (slide.blur) {

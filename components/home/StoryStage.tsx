@@ -47,6 +47,8 @@ export function StoryStage({ t }: { t: HomeContent }) {
         body: st.body,
         note: 'planned' in st && st.planned ? t.comingSoon : undefined,
       })),
+      // bước cuối: nền kem của section kế tiếp dâng lên bằng chấm pixel, nối liền mạch xuống dưới
+      { kind: 'blank', src: '', focus: '50% 50%', side: 'center', tone: 'dark', title: '' },
     ],
     [images, t],
   );
@@ -79,7 +81,8 @@ export function StoryStage({ t }: { t: HomeContent }) {
     };
   }, []);
 
-  const active = step > 0 ? t.steps[step - 1] : null;
+  const exiting = step > t.steps.length;
+  const active = step > 0 && !exiting ? t.steps[step - 1] : null;
   const dotsLight = !active || active.tone === 'light';
 
   return (
@@ -102,12 +105,15 @@ export function StoryStage({ t }: { t: HomeContent }) {
 
         <div
           className={s.phoneSlot}
-          style={{ transform: `translate(-50%, -50%) translateY(${step === 0 ? heroOffset : 0}px) scale(${scale})` }}
+          style={{
+            transform: `translate(-50%, -50%) translateY(${step === 0 ? `${heroOffset}px` : exiting ? '-40vh' : '0px'}) scale(${scale})`,
+            opacity: exiting ? 0 : 1,
+          }}
         >
-          <PhoneScreens step={step} t={t.phone} />
+          <PhoneScreens step={Math.min(step, t.steps.length)} t={t.phone} />
         </div>
 
-        <div className={`${s.dots} ${dotsLight ? '' : s.dotsDark}`} aria-hidden="true">
+        <div className={`${s.dots} ${dotsLight ? '' : s.dotsDark}`} style={{ opacity: exiting ? 0 : 1 }} aria-hidden="true">
           {[0, 1, 2, 3, 4, 5].map(i => (
             <span key={i} className={`${s.dot} ${step === i ? s.dotOn : ''}`} />
           ))}

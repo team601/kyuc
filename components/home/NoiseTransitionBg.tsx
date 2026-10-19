@@ -293,7 +293,9 @@ export function NoiseTransitionBg({ slides, positionRef, onStepChange }: Props) 
     // vẽ lại chữ khi font web đã tải xong
     document.fonts?.ready.then(() => composeAll());
     resize();
-    raf = requestAnimationFrame(loop);    return () => {
+    raf = requestAnimationFrame(loop);
+
+    return () => {
       disposed = true;
       recomposeRef.current = null;
       cancelAnimationFrame(raf);
