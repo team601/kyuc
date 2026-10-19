@@ -486,7 +486,7 @@
   .whyImg { min-height: 300px; }
   .weeklyImg { width: 100%; height: 70%; }
   .messages { top: auto; bottom: 0; right: 12px; }
-  .langFigure figcaption { position: static; margin-top: -40px; margin-left: 12px; margin-right: 12px; }
+  .langFigure figcaption { position: relative; margin-top: -40px; margin-left: 12px; margin-right: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

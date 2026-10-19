@@ -7,6 +7,8 @@ export interface StageSlide {
   src: string;
   /** object-position kiểu CSS, ví dụ "70% 40%" */
   focus: string;
+  /** object-position khi khung dọc (điện thoại): giữ người lớn tuổi trong khung */
+  focusMobile?: string;
   /** độ mờ toàn ảnh (px), dùng cho nền hero */
   blur?: number;
   side: 'left' | 'right' | 'center';
@@ -86,6 +88,7 @@ export function composeSlide(
   const ctx = canvas.getContext('2d')!;
   const w = canvas.width;
   const h = canvas.height;
+  const focus = w < h && slide.focusMobile ? slide.focusMobile : slide.focus;
   const cssW = w / scale;
   const cssH = h / scale;
   const mobile = cssW < 900;
@@ -104,10 +107,10 @@ export function composeSlide(
   if (img) {
     if (slide.blur) {
       ctx.filter = `blur(${slide.blur * k}px)`;
-      drawCover(ctx, img, w, h, slide.focus, 40 * k);
+      drawCover(ctx, img, w, h, focus, 40 * k);
       ctx.filter = 'none';
     } else {
-      drawCover(ctx, img, w, h, slide.focus);
+      drawCover(ctx, img, w, h, focus);
     }
   }
 
@@ -157,7 +160,7 @@ export function composeSlide(
         tmp.height = h;
         const t = tmp.getContext('2d')!;
         t.filter = `blur(${22 * k}px)`;
-        drawCover(t, img, w, h, slide.focus, 60 * k);
+        drawCover(t, img, w, h, focus, 60 * k);
         t.filter = 'none';
         // phủ tối ấm nhẹ lên vùng mờ để chữ sáng luôn đọc rõ
         t.fillStyle = 'rgba(40, 24, 18, 0.32)';
