@@ -88,7 +88,7 @@ export function StoryStage({ t }: { t: HomeContent }) {
   return (
     <section ref={wrapRef} className={s.stageWrap} aria-labelledby="hero-title">
       <span id="how" className={s.howAnchor} />
-      <div className={s.stage}>
+      <div className={`${s.stage} ${exiting ? s.stageExit : ''}`}>
         <NoiseTransitionBg slides={slides} positionRef={positionRef} onStepChange={onStepChange} />
 
         <div className={s.srOnly}>

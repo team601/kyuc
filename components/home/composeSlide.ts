@@ -93,12 +93,13 @@ export function composeSlide(
 
   ctx.save();
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = slide.kind === 'blank' ? '#FAF8F5' : '#F2EDE6';
-  ctx.fillRect(0, 0, w, h);
+  // khung trống cuối để trong suốt: section kế tiếp nằm phía sau và lộ ra qua các chấm
   if (slide.kind === 'blank') {
     ctx.restore();
     return;
   }
+  ctx.fillStyle = '#F2EDE6';
+  ctx.fillRect(0, 0, w, h);
 
   if (img) {
     if (slide.blur) {

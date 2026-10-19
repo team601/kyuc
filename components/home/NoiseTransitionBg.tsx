@@ -44,6 +44,8 @@ uniform vec2 uRes;
 uniform float uP;
 uniform float uSeed;
 uniform float uDpr;
+// 1 khi khung đích là khung trống cuối: chấm lật thành trong suốt để lộ section thật phía sau
+uniform float uClear;
 
 const float BAND = 0.2;
 const float DOT = 2.0;
@@ -91,7 +93,7 @@ void main() {
   vec3 a = blurred(uA, vUv, uP * 14.0 * uDpr);
   // khung đang hiện ra: luôn nét
   vec3 b = texture2D(uB, vUv).rgb;
-  gl_FragColor = vec4(mix(a, b, mask), 1.0);
+  gl_FragColor = uClear > 0.5 ? vec4(a, 1.0 - mask) : vec4(mix(a, b, mask), 1.0);
 }
 `;
 
@@ -137,7 +139,7 @@ export function NoiseTransitionBg({ slides, positionRef, onStepChange }: Props) 
     const canvas = canvasRef.current;
     if (!canvas) return;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const gl = reduce ? null : canvas.getContext('webgl', { antialias: false, premultipliedAlpha: false });
+    const gl = reduce ? null : canvas.getContext('webgl', { antialias: false, alpha: true, premultipliedAlpha: false });
     const count = slidesRef.current.length;
 
     let lastStep = -1;
@@ -233,6 +235,7 @@ export function NoiseTransitionBg({ slides, positionRef, onStepChange }: Props) 
         gl.bindTexture(gl.TEXTURE_2D, textures[to]);
         gl.uniform1f(u('uP'), p);
         gl.uniform1f(u('uSeed'), from * 3.7 + 1.3);
+        gl.uniform1f(u('uClear'), slidesRef.current[to].kind === 'blank' ? 1 : 0);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       } else if (ctx2d) {
         // không có WebGL / giảm chuyển động: đổi khung tức thì

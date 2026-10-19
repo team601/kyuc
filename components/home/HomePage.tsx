@@ -94,7 +94,7 @@ function HomeNav({ t }: { t: HomeContent }) {
 
 function WhyNow({ t }: { t: HomeContent }) {
   return (
-    <section aria-label={t.why.quote} className={s.section}>
+    <section aria-label={t.why.quote} className={`${s.section} ${s.afterStage}`}>
       <div className={s.whyCard}>
         <HomeImage name="kyuc-why-now" alt={t.why.imageAlt} className={s.whyImg} />
         <div className={s.whyText}>

@@ -121,6 +121,7 @@
 /* ─── Sticky story stage ─── */
 .stageWrap {
   position: relative;
+  z-index: 1;
   height: calc(100vh + 6 * 90vh);
   height: calc(100svh + 6 * 90svh);
 }
@@ -131,8 +132,17 @@
   height: 100vh;
   height: 100svh;
   overflow: hidden;
-  background: var(--sand);
 }
+/* đang lộ dần section phía sau: cho bấm xuyên qua khung */
+.stageExit { pointer-events: none; }
+/* section ngay sau đoạn sticky nằm sẵn phía sau màn hình cuối của nó */
+.section.afterStage {
+  position: relative;
+  z-index: 0;
+  margin-top: -100vh;
+  margin-top: -100svh;
+}
+.afterStage .whyCard { margin-top: 0; }
 .bgCanvas, .bgLayers { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .bgImg {
   position: absolute;
