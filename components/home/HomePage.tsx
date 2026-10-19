@@ -20,7 +20,7 @@ export default function HomePage({ images }: { images: Record<string, string> })
       <div className={s.home}>
         <HomeNav t={t} />
         <main>
-          <StoryStage t={t} startHref={START_HREF} />
+          <StoryStage t={t} />
           <WhyNow t={t} />
           <Archive t={t} />
           <Weekly t={t} />
