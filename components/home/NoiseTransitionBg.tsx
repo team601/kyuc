@@ -26,10 +26,17 @@ varying vec2 vUv;
 void main() { vUv = aPos * 0.5 + 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }
 `;
 
-// Khung mới dâng từ dưới lên theo mặt nạ noise. Trong lúc chuyển: cả khung mờ dần, vùng ranh giới vỡ khối pixel
-// theo lưới cố định (cỡ khối luỹ thừa 2 nên các khối luôn thẳng hàng), mép có dither và vệt quét mảnh.
+// Kiểu pixel của lamalama.com, theo cách site Align làm (Align Website Claude 2026/site/js/main.js):
+// không phóng to khối, mà là các CHẤM 2px cố định. Thứ tự lật theo một trường noise mượt dạng mây
+// (2 tầng, 170px và 55px) trộn với thiên hướng từ đáy lên; trong dải chuyển, mỗi chấm tự lật theo
+// ma trận Bayer 8x8 so với gradient, nên mép là dải chấm dither thưa -> dày qua 64 nấc.
+// Không có noise trôi: chỉ chuyển động khi cuộn. Trong lúc chuyển cả khung mờ dần.
 const FRAG = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
 precision mediump float;
+#endif
 varying vec2 vUv;
 uniform sampler2D uA;
 uniform sampler2D uB;
@@ -38,25 +45,18 @@ uniform float uP;
 uniform float uSeed;
 uniform float uDpr;
 
+const float BAND = 0.2;
+const float DOT = 2.0;
+
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
   vec2 i = floor(p); vec2 f = fract(p);
   vec2 u = f * f * (3.0 - 2.0 * f);
   return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
 }
-float fbm(vec2 p) {
-  float v = 0.0; float a = 0.5;
-  for (int i = 0; i < 4; i++) { v += a * noise(p); p *= 2.02; a *= 0.5; }
-  return v;
-}
 float bayer2(vec2 a) { a = floor(a); return fract(a.x / 2.0 + a.y * a.y * 0.75); }
 float bayer4(vec2 a) { return bayer2(0.5 * a) * 0.25 + bayer2(a); }
-
-float fieldAt(vec2 uv) {
-  float aspect = uRes.x / uRes.y;
-  float n = fbm(vec2(uv.x * aspect, uv.y) * 2.1 + vec2(0.0, -uP * 0.35) + uSeed);
-  return uv.y * 0.7 + (n - 0.5) * 0.5 + 0.25;
-}
+float bayer8(vec2 a) { return bayer4(0.5 * a) * 0.25 + bayer2(a); }
 vec3 blurred(sampler2D t, vec2 uv, float radius) {
   if (radius < 0.75) return texture2D(t, uv).rgb;
   vec2 px = radius / uRes;
@@ -69,36 +69,31 @@ vec3 blurred(sampler2D t, vec2 uv, float radius) {
   return c / 25.0;
 }
 void main() {
-  float p = uP * 1.34 - 0.08;
   float intensity = sin(3.14159 * uP);
 
-  // chọn cỡ khối trên lưới thô 32px: cả ô thô dùng chung một cỡ, nên khối con luôn khớp lưới
-  float coarse = 32.0 * uDpr;
-  vec2 cellC = floor(gl_FragCoord.xy / coarse);
-  vec2 uvC = (cellC + 0.5) * coarse / uRes;
-  float wide = 1.0 - smoothstep(p - 0.3, p + 0.3, fieldAt(uvC));
-  float band = 1.0 - abs(wide * 2.0 - 1.0);
-  float level = floor(clamp(band * intensity * 1.15, 0.0, 1.0) * 5.0);
-  float block = exp2(level) * uDpr;
-  block = min(block, coarse);
+  // lưới chấm 2px (theo px CSS), gốc ở đáy màn hình
+  float dotPx = DOT * uDpr;
+  vec2 cell = floor(gl_FragCoord.xy / dotPx);
+  vec2 css = (cell + 0.5) * DOT;            // tâm chấm, tính bằng px CSS
+  vec2 cssRes = uRes / uDpr;
 
-  vec2 cell = floor(gl_FragCoord.xy / block);
-  vec2 uvq = (cell + 0.5) * block / uRes;
+  // trường thứ tự: 0.42 * từ đáy lên + 0.58 * mây (2 tầng), như Align
+  float u = css.y / cssRes.y;
+  float n = 0.65 * noise(css / 170.0 + vec2(3.1, 7.7) + uSeed)
+          + 0.35 * noise(css / 55.0 + vec2(11.3, 1.9) + uSeed);
+  float val = 0.42 * u + 0.58 * n;
+  float t = (1.0 - BAND) * val;
 
-  float soft = 1.0 - smoothstep(p - 0.11, p + 0.11, fieldAt(uvq));
-  float dithered = step(bayer4(cell), soft);
-  float mask = mix(soft, dithered, step(1.5 * uDpr, block));
+  float g = (uP - t) / BAND;
+  float mask = (g >= 1.0 || (g > 0.0 && g > bayer8(cell))) ? 1.0 : 0.0;
 
-  // cả khung mờ dần khi đang chuyển, rồi nét lại
-  float radius = intensity * 14.0 * uDpr;
-  vec3 a = blurred(uA, uvq, radius);
-  vec3 b = blurred(uB, uvq, radius);
-  vec3 col = mix(a, b, mask);
-
-  float scan = step(0.5, fract(gl_FragCoord.y / (3.0 * uDpr)));
-  col += vec3(0.91, 0.31, 0.23) * band * intensity * 0.08;
-  col *= 1.0 - band * intensity * 0.05 * scan;
-  gl_FragColor = vec4(col, 1.0);
+  // khung đang rời đi: vỡ thành chấm và mờ dần theo mức cuộn
+  vec2 uvDot = (cell + 0.5) * dotPx / uRes;
+  vec2 uvA = intensity > 0.001 ? uvDot : vUv;
+  vec3 a = blurred(uA, uvA, uP * 14.0 * uDpr);
+  // khung đang hiện ra: luôn nét
+  vec3 b = texture2D(uB, vUv).rgb;
+  gl_FragColor = vec4(mix(a, b, mask), 1.0);
 }
 `;
 
@@ -300,8 +295,7 @@ export function NoiseTransitionBg({ slides, positionRef, onStepChange }: Props) 
     // vẽ lại chữ khi font web đã tải xong
     document.fonts?.ready.then(() => composeAll());
     resize();
-    raf = requestAnimationFrame(loop);
-    return () => {
+    raf = requestAnimationFrame(loop);    return () => {
       disposed = true;
       recomposeRef.current = null;
       cancelAnimationFrame(raf);
