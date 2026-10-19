@@ -93,7 +93,9 @@ void main() {
   vec3 a = blurred(uA, vUv, uP * 14.0 * uDpr);
   // khung đang hiện ra: luôn nét
   vec3 b = texture2D(uB, vUv).rgb;
-  gl_FragColor = uClear > 0.5 ? vec4(a, 1.0 - mask) : vec4(mix(a, b, mask), 1.0);
+  // chấm trong suốt phải có rgb = 0, nếu không trình duyệt cộng màu ảnh cũ lên section phía sau thành lớp ám
+  float keep = 1.0 - mask;
+  gl_FragColor = uClear > 0.5 ? vec4(a * keep, keep) : vec4(mix(a, b, mask), 1.0);
 }
 `;
 
@@ -139,7 +141,7 @@ export function NoiseTransitionBg({ slides, positionRef, onStepChange }: Props) 
     const canvas = canvasRef.current;
     if (!canvas) return;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const gl = reduce ? null : canvas.getContext('webgl', { antialias: false, alpha: true, premultipliedAlpha: false });
+    const gl = reduce ? null : canvas.getContext('webgl', { antialias: false, alpha: true, premultipliedAlpha: true });
     const count = slidesRef.current.length;
 
     let lastStep = -1;
