@@ -107,10 +107,7 @@ export function DashboardClient({ userId, displayName, userEmail, stories, famil
       {/* Sidebar */}
       <aside className={styles.sidebar}>
         <Link href="/" className={styles.logo}>
-          <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
-            <path d="M6 4v20M6 14L20 6M6 14L20 22" stroke="#E8503A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span>kyuc<sup>°</sup></span>
+          kyuc<span>.ai</span>
         </Link>
 
         <nav className={styles.nav}>
@@ -173,10 +170,7 @@ export function DashboardClient({ userId, displayName, userEmail, stories, famil
         {/* Mobile top bar */}
         <div className={styles.mobileBar}>
           <Link href="/" className={styles.mobileLogo}>
-            <svg width="18" height="18" viewBox="0 0 28 28" fill="none">
-              <path d="M6 4v20M6 14L20 6M6 14L20 22" stroke="#E8503A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <span>kyuc<sup>°</sup></span>
+            kyuc<span>.ai</span>
           </Link>
           <div className={styles.mobileActions}>
             <LanguageSwitcher />
@@ -342,7 +336,7 @@ export function DashboardClient({ userId, displayName, userEmail, stories, famil
                     alignItems: 'center',
                     gap: '0.35rem',
                     background: '#FFF2EE',
-                    color: '#E8503A',
+                    color: 'var(--color-brand)',
                     border: '1px solid #FED8CE',
                     borderRadius: '999px',
                     padding: '0.2rem 0.6rem',

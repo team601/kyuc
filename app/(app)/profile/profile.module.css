@@ -19,21 +19,20 @@
 }
 
 .logo {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-lg);
-  font-weight: var(--font-bold);
+  gap: 0;
   color: var(--color-ink);
   text-decoration: none;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
-.logo sup {
-  font-size: 0.5em;
-  color: var(--color-brand);
-  vertical-align: super;
-  line-height: 0;
+.logo span {
+  color: var(--color-brand-light);
 }
 
 .main {
@@ -49,7 +48,7 @@
 /* Tabs */
 .tabNav {
   display: flex;
-  background: #ECE5DB;
+  background: var(--color-border-light);
   padding: 0.35rem;
   border-radius: var(--radius-lg, 0.75rem);
   width: 100%;
@@ -73,7 +72,7 @@
 .tabBtnActive {
   background: white;
   color: var(--color-ink);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(58, 42, 36, 0.08);
 }
 
 .tabContent {
@@ -142,7 +141,7 @@
 
 .avatarInputLabel:hover {
   background: var(--color-warm-beige);
-  border-color: #D1C7BA;
+  border-color: var(--color-border);
 }
 
 .avatarInputHidden {
@@ -150,10 +149,11 @@
 }
 
 .name {
+  font-family: var(--font-serif);
   font-size: var(--text-2xl);
-  font-weight: var(--font-extrabold);
+  font-weight: 400;
   color: var(--color-ink);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.005em;
 }
 
 .email {
@@ -186,10 +186,11 @@
 }
 
 .statNum {
+  font-family: var(--font-serif);
   font-size: var(--text-3xl);
-  font-weight: var(--font-extrabold);
+  font-weight: 400;
   color: var(--color-brand);
-  letter-spacing: -0.04em;
+  letter-spacing: -0.005em;
   line-height: 1;
 }
 
@@ -266,7 +267,7 @@
 }
 
 .saveBtn:hover:not(:disabled) {
-  background: #D43E29;
+  background: var(--color-brand-dark);
 }
 
 .saveBtn:disabled {
@@ -275,9 +276,9 @@
 }
 
 .oauthBanner {
-  background: #EFF6FF;
-  border: 1px solid #BFDBFE;
-  color: #1E40AF;
+  background: var(--color-mint);
+  border: none;
+  color: var(--color-teal);
   padding: 1.25rem;
   border-radius: var(--radius-lg);
   font-size: 0.9rem;

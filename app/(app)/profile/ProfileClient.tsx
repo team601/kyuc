@@ -241,10 +241,7 @@ export function ProfileClient({
       <header className={styles.header}>
         <Link href="/dashboard" className={styles.back}>{bt.profile.backToStories}</Link>
         <Link href="/" className={styles.logo}>
-          <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
-            <path d="M6 4v20M6 14L20 6M6 14L20 22" stroke="#E8503A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span>kyuc<sup>°</sup></span>
+          kyuc<span>.ai</span>
         </Link>
         <div className={styles.headerRight}>
           <LanguageSwitcher />

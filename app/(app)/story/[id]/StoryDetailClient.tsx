@@ -88,10 +88,7 @@ export function StoryDetailClient({ story }: StoryDetailClientProps) {
       <header className={styles.header}>
         <Link href="/dashboard" className={styles.back}>{bt.story.backToDashboard}</Link>
         <Link href="/" className={styles.logo}>
-          <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
-            <path d="M6 4v20M6 14L20 6M6 14L20 22" stroke="#E8503A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span>kyuc<sup>°</sup></span>
+          kyuc<span>.ai</span>
         </Link>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <LanguageSwitcher />
@@ -139,7 +136,7 @@ export function StoryDetailClient({ story }: StoryDetailClientProps) {
             </div>
 
             {/* Quick Actions (Share, Edit, Delete) */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
               <button
                 onClick={() => setShowShareModal(true)}
                 className="btn btn-ghost btn-sm"
@@ -228,7 +225,7 @@ export function StoryDetailClient({ story }: StoryDetailClientProps) {
                     borderRadius: 'var(--radius-md)',
                     fontSize: '0.75rem',
                     cursor: 'pointer',
-                    color: copiedTranscript ? '#16A34A' : '#736F6E',
+                    color: copiedTranscript ? '#16A34A' : 'var(--color-muted)',
                     fontWeight: 600,
                   }}
                 >

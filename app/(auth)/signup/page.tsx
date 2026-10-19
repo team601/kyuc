@@ -78,10 +78,7 @@ export default function SignupPage() {
         {/* Header */}
         <div className={styles.header}>
           <Link href="/" className={styles.logo}>
-            <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
-              <path d="M6 4v20M6 14L20 6M6 14L20 22" stroke="#E8503A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <span>kyuc<sup>°</sup></span>
+            kyuc<span>.ai</span>
           </Link>
           <h1 className={styles.title}>Preserve family stories</h1>
           <p className={styles.subtitle}>Free forever. Takes less than a minute.</p>

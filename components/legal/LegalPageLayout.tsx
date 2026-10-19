@@ -1,8 +1,10 @@
 'use client';
 
 import React from 'react';
-import Navbar from '@/components/landing/Navbar';
-import Footer from '@/components/landing/Footer';
+import { HomeFooter, HomeNav } from '@/components/home/HomePage';
+import home from '@/components/home/home.module.css';
+import { homeContent } from '@/lib/homeContent';
+import { useLanguage } from '@/lib/LanguageContext';
 import styles from './LegalPageLayout.module.css';
 
 interface LegalPageLayoutProps {
@@ -18,14 +20,16 @@ export default function LegalPageLayout({
   lastUpdated,
   children,
 }: LegalPageLayoutProps) {
+  const { lang } = useLanguage();
+  const t = homeContent[lang];
   return (
-    <>
-      <Navbar />
+    <div className={home.home}>
+      <HomeNav t={t} solid />
       <main className={styles.page}>
         <header className={styles.header}>
           <div className="container">
             <div className={styles.headerInner}>
-              <span className={styles.badge}>kyuc° trust & safety</span>
+              <span className={styles.badge}>kyuc.ai trust & safety</span>
               <h1 className={styles.title}>{title}</h1>
               <p className={styles.subtitle}>{subtitle}</p>
               <p className={styles.meta}>{lastUpdated}</p>
@@ -41,7 +45,7 @@ export default function LegalPageLayout({
           </div>
         </section>
       </main>
-      <Footer />
-    </>
+      <HomeFooter t={t} />
+    </div>
   );
 }

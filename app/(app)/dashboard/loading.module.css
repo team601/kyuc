@@ -36,7 +36,7 @@
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #ECE5DB 25%, #F7F4F0 50%, #ECE5DB 75%);
+  background: linear-gradient(90deg, var(--color-border-light) 25%, #F7F4F0 50%, var(--color-border-light) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: var(--radius-md);
@@ -82,7 +82,7 @@
 .btnSkeleton {
   width: 140px;
   height: 44px;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
 }
 
 .statsGrid {
