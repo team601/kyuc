@@ -8,6 +8,9 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { backendTranslations } from '@/lib/translations';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { categoryMeta, type Category } from '@/lib/questions';
+import { mediaSrc } from '@/lib/media';
+import { loadDraft, clearDraft } from '@/lib/draftStore';
+import { uploadStoryAudio } from '@/lib/storageUpload';
 import styles from './dashboard.module.css';
 
 interface Story {
@@ -33,6 +36,7 @@ interface PendingDraft {
   questionEn: string;
   questionVi: string;
   text: string;
+  audio?: Blob | null;
   savedAt: number;
 }
 
@@ -53,22 +57,57 @@ export function DashboardClient({ userId, displayName, userEmail, stories, famil
   const [pendingDraft, setPendingDraft] = useState<PendingDraft | null>(null);
   const [claimingDraft, setClaimingDraft] = useState(false);
 
+  const [claimError, setClaimError] = useState<string | null>(null);
+
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('kyuc_pending_draft');
-      if (stored) {
-        const parsed = JSON.parse(stored) as PendingDraft;
-        setPendingDraft(parsed);
+    // Homepage draft: IndexedDB holds the recording; localStorage is the text-only fallback.
+    (async () => {
+      const draft = await loadDraft('landing');
+      if (draft && (draft.audio || draft.text?.trim())) {
+        setPendingDraft({
+          category: draft.category || 'roots',
+          questionEn: draft.questionEn || '',
+          questionVi: draft.questionVi || '',
+          text: draft.text || '',
+          audio: draft.audio ?? null,
+          savedAt: draft.savedAt,
+        });
+        return;
       }
-    } catch {}
+      try {
+        const stored = localStorage.getItem('kyuc_pending_draft');
+        if (stored) setPendingDraft(JSON.parse(stored) as PendingDraft);
+      } catch {}
+    })();
   }, []);
+
+  const forgetDraft = async () => {
+    await clearDraft('landing');
+    try {
+      localStorage.removeItem('kyuc_pending_draft');
+    } catch {}
+    setPendingDraft(null);
+  };
+
+  const handleDismissDraft = async () => {
+    if (pendingDraft?.audio && !window.confirm(lang === 'vi'
+      ? 'Bỏ qua sẽ xóa bản ghi âm chưa lưu này. Không thể khôi phục lại.'
+      : 'Dismissing deletes this unsaved recording. This cannot be undone.')) return;
+    await forgetDraft();
+  };
 
   const handleClaimDraft = async () => {
     if (!pendingDraft) return;
     setClaimingDraft(true);
+    setClaimError(null);
+    const supabase = createClient();
+    let audioPath: string | null = null;
     try {
-      const supabase = createClient();
-      const title = (lang === 'vi' ? pendingDraft.questionVi : pendingDraft.questionEn).slice(0, 60);
+      if (pendingDraft.audio) {
+        audioPath = await uploadStoryAudio(supabase, userId, pendingDraft.audio);
+      }
+      const title = (lang === 'vi' ? pendingDraft.questionVi : pendingDraft.questionEn).slice(0, 60) || 'Untitled';
+      // Private until the storyteller chooses to share it.
       const { error } = await supabase.from('stories').insert({
         user_id: userId,
         title,
@@ -76,15 +115,20 @@ export function DashboardClient({ userId, displayName, userEmail, stories, famil
         question_en: pendingDraft.questionEn,
         question_vi: pendingDraft.questionVi,
         content_text: pendingDraft.text || '',
+        audio_url: audioPath,
+        visibility: 'private',
+        is_public: false,
       });
+      if (error) throw error;
 
-      if (!error) {
-        localStorage.removeItem('kyuc_pending_draft');
-        setPendingDraft(null);
-        router.refresh();
-      }
+      await forgetDraft();
+      router.refresh();
     } catch {
-      // ignore
+      if (audioPath) await supabase.storage.from('audio').remove([audioPath]);
+      // Keep the draft so nothing is lost; the user can retry.
+      setClaimError(lang === 'vi'
+        ? 'Chưa lưu được. Bản nháp vẫn được giữ trên trình duyệt này, vui lòng thử lại.'
+        : 'Could not save yet. The draft is still kept in this browser. Please try again.');
     } finally {
       setClaimingDraft(false);
     }
@@ -231,6 +275,16 @@ export function DashboardClient({ userId, displayName, userEmail, stories, famil
               <p style={{ fontSize: '0.875rem', color: '#9A3412', marginTop: '0.25rem' }}>
                 &ldquo;{lang === 'vi' ? pendingDraft.questionVi : pendingDraft.questionEn}&rdquo;
               </p>
+              {pendingDraft.audio && (
+                <p style={{ fontSize: '0.875rem', color: '#9A3412', marginTop: '0.25rem' }}>
+                  🎙 {lang === 'vi' ? 'Có kèm bản ghi âm' : 'Includes a voice recording'}
+                </p>
+              )}
+              {claimError && (
+                <p role="alert" style={{ fontSize: '0.875rem', color: '#991B1B', marginTop: '0.5rem' }}>
+                  {claimError}
+                </p>
+              )}
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <button
@@ -244,10 +298,7 @@ export function DashboardClient({ userId, displayName, userEmail, stories, famil
                   : (lang === 'vi' ? 'Lưu vào tài khoản ngay' : 'Save to archive now')}
               </button>
               <button
-                onClick={() => {
-                  localStorage.removeItem('kyuc_pending_draft');
-                  setPendingDraft(null);
-                }}
+                onClick={handleDismissDraft}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -320,10 +371,10 @@ export function DashboardClient({ userId, displayName, userEmail, stories, famil
           <div className={styles.grid}>
             {displayedStories.map(story => (
               <Link href={`/story/${story.id}`} key={story.id} className={styles.storyCard}>
-                {story.image_url && (
+                {mediaSrc(story.image_url, 'photos') && (
                   <div className={styles.cardThumb}>
                     <img
-                      src={story.image_url}
+                      src={mediaSrc(story.image_url, 'photos')!}
                       alt={story.title}
                       className={styles.cardThumbImg}
                       loading="lazy"

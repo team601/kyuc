@@ -3,6 +3,9 @@
 import { useState, useRef, useCallback } from 'react';
 import { questions, getRandomQuestion, categoryMeta, type Category } from '@/lib/questions';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useRouter } from 'next/navigation';
+import { saveDraft } from '@/lib/draftStore';
+import { useUnsavedGuard } from '@/lib/useUnsavedGuard';
 import styles from './QuestionDemo.module.css';
 
 const FIRST_QUESTION = questions.find(q => q.category === 'roots') || questions[0];
@@ -20,6 +23,10 @@ export default function QuestionDemo() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const router = useRouter();
+
+  // Recordings here live only in memory until handed off; warn before the page is closed.
+  useUnsavedGuard(isRecording || !!audioBlob || !!storyText.trim());
 
   const handleNextQuestion = () => {
     setQuestion(getRandomQuestion(category));
@@ -55,7 +62,7 @@ export default function QuestionDemo() {
       };
 
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
         setAudioBlob(blob);
         setAudioUrl(URL.createObjectURL(blob));
         stream.getTracks().forEach((track) => track.stop());
@@ -104,18 +111,39 @@ export default function QuestionDemo() {
     a.click();
   };
 
-  const handleSaveToAccount = () => {
+  const handleSaveToAccount = async () => {
+    // Keep the recording itself (not just the text) in this browser so it can be
+    // uploaded to the family archive right after signup.
+    const stored = await saveDraft('landing', {
+      audio: audioBlob,
+      audioMime: audioBlob?.type ?? null,
+      text: storyText,
+      category,
+      questionId: question.id,
+      questionEn: question.en,
+      questionVi: question.vi,
+      savedAt: Date.now(),
+    });
+
+    if (!stored && audioBlob) {
+      const proceed = window.confirm(
+        lang === 'vi'
+          ? 'Trình duyệt này không giữ tạm được bản ghi âm, nên bản ghi sẽ không được chuyển vào tài khoản. Hãy bấm Hủy và tải bản ghi về máy trước. Bấm OK để tiếp tục chỉ với phần văn bản.'
+          : "This browser can't hold the recording while you sign up, so it won't carry over. Press Cancel and download it first, or OK to continue with the text only."
+      );
+      if (!proceed) return;
+    }
+
     try {
-      const draft = {
+      localStorage.setItem('kyuc_pending_draft', JSON.stringify({
         category,
         questionEn: question.en,
         questionVi: question.vi,
         text: storyText,
         savedAt: Date.now(),
-      };
-      localStorage.setItem('kyuc_pending_draft', JSON.stringify(draft));
-      window.location.href = '/signup';
+      }));
     } catch {}
+    router.push('/signup');
   };
 
   const currentCategory = categoryMeta[category];

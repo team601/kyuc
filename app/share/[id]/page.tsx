@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { ShareClient } from './ShareClient';
+import { mediaSrc } from '@/lib/media';
 
 export async function generateMetadata({
   params,
@@ -23,6 +24,10 @@ export async function generateMetadata({
     };
   }
 
+  const ogImage = mediaSrc(story.image_url, 'photos', {
+    origin: process.env.NEXT_PUBLIC_SITE_URL || 'https://kyuc.alignlab.com',
+  });
+
   const description =
     story.content_text?.slice(0, 160) ||
     'Một câu chuyện gia đình được lưu giữ trọn vẹn trên kyuc°.';
@@ -33,13 +38,13 @@ export async function generateMetadata({
     openGraph: {
       title: `${story.title} | kyuc°`,
       description,
-      images: story.image_url ? [story.image_url] : undefined,
+      images: ogImage ? [ogImage] : undefined,
     },
     twitter: {
       card: 'summary_large_image',
       title: `${story.title} | kyuc°`,
       description,
-      images: story.image_url ? [story.image_url] : undefined,
+      images: ogImage ? [ogImage] : undefined,
     },
   };
 }

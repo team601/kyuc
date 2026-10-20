@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { AudioPlayer } from '@/components/story/AudioPlayer';
+import { mediaSrc } from '@/lib/media';
 import { createClient } from '@/lib/supabase/client';
 import styles from './share.module.css';
 
@@ -149,10 +150,10 @@ export function ShareClient({
             </blockquote>
           )}
 
-          {story.image_url && (
+          {mediaSrc(story.image_url, 'photos') && (
             <div className={styles.photoWrap}>
               <img
-                src={story.image_url}
+                src={mediaSrc(story.image_url, 'photos')!}
                 alt={story.photo_caption || story.title}
                 className={styles.photoImg}
               />
@@ -165,12 +166,12 @@ export function ShareClient({
             </div>
           )}
 
-          {story.audio_url && (
+          {mediaSrc(story.audio_url, 'audio') && (
             <div className={styles.audioWrap}>
               <p className={styles.audioLabel}>
                 🎙 {lang === 'vi' ? 'Lắng nghe giọng nói' : 'Listen to voice recording'}
               </p>
-              <AudioPlayer src={story.audio_url} />
+              <AudioPlayer src={mediaSrc(story.audio_url, 'audio')!} />
             </div>
           )}
 

@@ -7,6 +7,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { backendTranslations } from '@/lib/translations';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { createClient } from '@/lib/supabase/client';
+import { mediaSrc, storagePathFrom } from '@/lib/media';
 import styles from './family.module.css';
 
 interface FamilyMember {
@@ -193,12 +194,14 @@ export function FamilyClient({
     setEditError(null);
 
     try {
-      let finalAvatarUrl = editAvatarUrl;
+      // Store the storage path (private bucket), never a public URL.
+      let finalAvatarUrl = storagePathFrom(editAvatarUrl, 'photos') ?? editAvatarUrl;
 
       if (editAvatarFile) {
         const supabase = createClient();
-        const ext = editAvatarFile.name.split('.').pop() || 'webp';
-        const filePath = `avatars/${editingMember.id}-${Date.now()}.${ext}`;
+        const ext = (editAvatarFile.name.split('.').pop() || 'webp').replace(/[^A-Za-z0-9]/g, '') || 'webp';
+        // First folder must be the uploader's id to satisfy the storage insert policy.
+        const filePath = `${currentUser.id}/avatars/${editingMember.id}-${Date.now()}.${ext}`;
         const { data: uploadData, error: uploadErr } = await supabase.storage
           .from('photos')
           .upload(filePath, editAvatarFile, { contentType: editAvatarFile.type });
@@ -206,10 +209,10 @@ export function FamilyClient({
         if (uploadErr) {
           throw new Error(uploadErr.message);
         }
-        if (uploadData) {
-          const { data: urlData } = supabase.storage.from('photos').getPublicUrl(uploadData.path);
-          finalAvatarUrl = urlData.publicUrl;
+        if (!uploadData) {
+          throw new Error(lang === 'vi' ? 'Không tải được ảnh lên. Vui lòng thử lại.' : 'Photo upload failed. Please try again.');
         }
+        finalAvatarUrl = uploadData.path;
       }
 
       const res = await fetch('/api/family/member', {
@@ -235,7 +238,7 @@ export function FamilyClient({
                 ...m,
                 displayName: editName.trim() || m.displayName,
                 role: editRole.trim() || null,
-                avatarUrl: finalAvatarUrl,
+                avatarUrl: mediaSrc(finalAvatarUrl, 'photos') ?? finalAvatarUrl,
               }
             : m
         )
@@ -559,9 +562,9 @@ export function FamilyClient({
                     transition: 'transform 0.15s ease, box-shadow 0.15s ease',
                   }}
                 >
-                  {story.image_url && (
+                  {mediaSrc(story.image_url, 'photos') && (
                     <img
-                      src={story.image_url}
+                      src={mediaSrc(story.image_url, 'photos')!}
                       alt={story.title}
                       style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: 'var(--radius-lg)' }}
                     />

@@ -9,6 +9,7 @@ import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { createClient } from '@/lib/supabase/client';
 import { ShareModal } from '@/components/story/ShareModal';
 import { AudioPlayer } from '@/components/story/AudioPlayer';
+import { mediaSrc } from '@/lib/media';
 import styles from './story.module.css';
 
 interface Story {
@@ -37,6 +38,9 @@ export function StoryDetailClient({ story }: StoryDetailClientProps) {
   const bt = backendTranslations[lang];
 
   const [showShareModal, setShowShareModal] = useState(false);
+  const imageSrc = mediaSrc(story.image_url, 'photos');
+  const audioSrc = mediaSrc(story.audio_url, 'audio');
+  const audioDownloadSrc = mediaSrc(story.audio_url, 'audio', { download: true });
   const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -175,10 +179,10 @@ export function StoryDetailClient({ story }: StoryDetailClientProps) {
           )}
 
           {/* Cherished Photo */}
-          {story.image_url && (
+          {imageSrc && (
             <div className={styles.photoWrap}>
               <img
-                src={story.image_url}
+                src={imageSrc}
                 alt={story.photo_caption || story.title}
                 className={styles.photoImg}
               />
@@ -192,10 +196,10 @@ export function StoryDetailClient({ story }: StoryDetailClientProps) {
           )}
 
           {/* Audio player */}
-          {story.audio_url && (
+          {audioSrc && (
             <div className={styles.audioWrap}>
               <p className={styles.audioLabel}>🎙 {bt.story.audioSection}</p>
-              <AudioPlayer src={story.audio_url} />
+              <AudioPlayer src={audioSrc} />
             </div>
           )}
 
@@ -255,8 +259,8 @@ export function StoryDetailClient({ story }: StoryDetailClientProps) {
 
           {/* Bottom Actions */}
           <div className={styles.actions}>
-            {story.audio_url && (
-              <a href={story.audio_url} download className="btn btn-ghost btn-sm">
+            {audioDownloadSrc && (
+              <a href={audioDownloadSrc} download className="btn btn-ghost btn-sm">
                 ↓ {lang === 'vi' ? 'Tải âm thanh' : 'Download Audio'}
               </a>
             )}

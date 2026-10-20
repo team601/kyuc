@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useRef, useCallback, Suspense } from 'react';
+import { useState, useRef, useCallback, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { getRandomQuestion, categoryMeta, type Category } from '@/lib/questions';
+import { getRandomQuestion, categoryMeta, questions, type Category, type Question } from '@/lib/questions';
+import { saveDraft, loadDraft, clearDraft, draftHasContent, type StoryDraft } from '@/lib/draftStore';
+import { uploadStoryAudio, uploadStoryPhoto, UploadError } from '@/lib/storageUpload';
+import { useUnsavedGuard } from '@/lib/useUnsavedGuard';
 import PhotoUploader from '@/components/story/PhotoUploader';
 import { AudioPlayer } from '@/components/story/AudioPlayer';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -21,7 +24,7 @@ function NewStoryContent() {
   const bt = backendTranslations[lang];
 
   const [category, setCategory] = useState<Category>(initialCat);
-  const [question, setQuestion] = useState(() => getRandomQuestion(initialCat));
+  const [question, setQuestion] = useState<Question>(() => getRandomQuestion(initialCat));
   const [title, setTitle] = useState('');
   const [storyText, setStoryText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -33,6 +36,76 @@ function NewStoryContent() {
   const [audioTranscript, setAudioTranscript] = useState('');
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState<'category' | 'record' | 'save'>('category');
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [restorableDraft, setRestorableDraft] = useState<StoryDraft | null>(null);
+  const [draftChecked, setDraftChecked] = useState(false);
+  const [localBackupFailed, setLocalBackupFailed] = useState(false);
+
+  const hasUnsavedWork = isRecording || !!audioBlob || !!storyText.trim() || !!audioTranscript.trim();
+  useUnsavedGuard(hasUnsavedWork && !saving);
+
+  // Offer to restore an unsaved draft from an earlier visit (refresh, crash, failed upload).
+  useEffect(() => {
+    loadDraft('story-new').then(draft => {
+      if (draftHasContent(draft)) setRestorableDraft(draft);
+      setDraftChecked(true);
+    });
+  }, []);
+
+  // Keep a local backup of unsaved work in this browser until it is saved to the account.
+  // Paused while an older draft is waiting to be restored or discarded, so it is never overwritten.
+  useEffect(() => {
+    if (!draftChecked || restorableDraft || isRecording) return;
+    if (!audioBlob && !storyText.trim() && !audioTranscript.trim()) return;
+    const timer = setTimeout(() => {
+      saveDraft('story-new', {
+        audio: audioBlob,
+        audioMime: audioBlob?.type ?? null,
+        text: storyText,
+        title,
+        transcript: audioTranscript,
+        photoCaption,
+        category,
+        questionId: question.id,
+        questionEn: question.en,
+        questionVi: question.vi,
+        savedAt: Date.now(),
+      }).then(ok => setLocalBackupFailed(!ok && !!audioBlob));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [draftChecked, restorableDraft, isRecording, audioBlob, storyText, title, audioTranscript, photoCaption, category, question]);
+
+  const handleRestoreDraft = () => {
+    const draft = restorableDraft;
+    if (!draft) return;
+    const cat = (draft.category && draft.category in categoryMeta ? draft.category : category) as Category;
+    const restoredQuestion: Question =
+      questions.find(q => q.id === draft.questionId) ||
+      (draft.questionEn || draft.questionVi
+        ? { id: draft.questionId || 'restored', category: cat, en: draft.questionEn || draft.questionVi || '', vi: draft.questionVi || draft.questionEn || '' }
+        : question);
+    setCategory(cat);
+    setQuestion(restoredQuestion);
+    setStoryText(draft.text || '');
+    setTitle(draft.title || '');
+    setAudioTranscript(draft.transcript || '');
+    setPhotoCaption(draft.photoCaption || '');
+    if (draft.audio) {
+      setAudioBlob(draft.audio);
+      setAudioUrl(URL.createObjectURL(draft.audio));
+    }
+    setRestorableDraft(null);
+    setStep('record');
+  };
+
+  const handleDiscardDraft = async () => {
+    const msg = restorableDraft?.audio
+      ? (lang === 'vi' ? 'Xóa bản ghi âm chưa lưu này? Không thể khôi phục lại.' : 'Delete this unsaved recording? This cannot be undone.')
+      : (lang === 'vi' ? 'Xóa bản nháp chưa lưu này?' : 'Delete this unsaved draft?');
+    if (!window.confirm(msg)) return;
+    await clearDraft('story-new');
+    setRestorableDraft(null);
+  };
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recognitionRef = useRef<any>(null);
@@ -46,6 +119,9 @@ function NewStoryContent() {
   };
 
   const handleNextQuestion = () => {
+    if (audioBlob && !window.confirm(lang === 'vi'
+      ? 'Đổi câu hỏi sẽ bỏ bản ghi âm hiện tại. Bạn chắc chứ?'
+      : 'Changing the question discards the current recording. Continue?')) return;
     setQuestion(getRandomQuestion(category));
     setStoryText('');
     setAudioTranscript('');
@@ -177,49 +253,36 @@ function NewStoryContent() {
       return;
     }
     setSaving(true);
+    setSaveError(null);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.push('/login'); return; }
-
-    let audio_url = null;
-    let image_url = null;
-
-    // Upload audio if exists
-    if (audioBlob) {
-      if (audioBlob.size > 50 * 1024 * 1024) {
-        alert(lang === 'vi' ? 'Bản ghi âm vượt quá dung lượng tối đa (50MB).' : 'Audio recording exceeds the 50MB limit.');
-        setSaving(false);
-        return;
-      }
-      const isMp4 = audioBlob.type.includes('mp4') || audioBlob.type.includes('aac');
-      const isOgg = audioBlob.type.includes('ogg');
-      const isWav = audioBlob.type.includes('wav');
-      const ext = isMp4 ? 'm4a' : isOgg ? 'ogg' : isWav ? 'wav' : 'webm';
-      const fileName = `${user.id}/${Date.now()}.${ext}`;
-      const uploadMime = audioBlob.type || (isMp4 ? 'audio/mp4' : 'audio/webm');
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('audio')
-        .upload(fileName, audioBlob, { contentType: uploadMime });
-      if (!uploadError && uploadData) {
-        const { data: urlData } = supabase.storage.from('audio').getPublicUrl(uploadData.path);
-        audio_url = urlData.publicUrl;
-      }
+    if (!user) {
+      // The draft is backed up in this browser and can be restored after signing in.
+      setSaving(false);
+      router.push('/login');
+      return;
     }
 
-    // Upload photo if exists
-    if (photoFile) {
-      const ext = photoFile.name.split('.').pop() || 'webp';
-      const photoPath = `${user.id}/${Date.now()}.${ext}`;
-      const { data: photoData, error: photoError } = await supabase.storage
-        .from('photos')
-        .upload(photoPath, photoFile, { contentType: photoFile.type });
-      if (!photoError && photoData) {
-        const { data: urlData } = supabase.storage.from('photos').getPublicUrl(photoData.path);
-        image_url = urlData.publicUrl;
-      }
+    let audio_url: string | null = null;
+    let image_url: string | null = null;
+
+    // Never save a story whose media failed to upload: keep everything on screen and let the user retry.
+    try {
+      if (audioBlob) audio_url = await uploadStoryAudio(supabase, user.id, audioBlob);
+      if (photoFile) image_url = await uploadStoryPhoto(supabase, user.id, photoFile);
+    } catch (err) {
+      const tooLarge = err instanceof UploadError && err.message === 'too_large';
+      setSaveError(tooLarge
+        ? (lang === 'vi' ? 'Bản ghi âm vượt quá dung lượng tối đa (50MB). Hãy tải bản ghi về máy để giữ lại.' : 'The recording is over the 50MB limit. Please download it to keep a copy.')
+        : (lang === 'vi'
+          ? 'Chưa tải lên được. Bản ghi âm vẫn còn ở đây, vui lòng kiểm tra kết nối và bấm Lưu lại.'
+          : 'Upload failed. Your recording is still here. Check your connection and press Save again.'));
+      if (audio_url) await supabase.storage.from('audio').remove([audio_url]);
+      setSaving(false);
+      return;
     }
 
-    // Save story
+    // New stories are private until the storyteller chooses to share them.
     const { data: story, error } = await supabase.from('stories').insert({
       user_id: user.id,
       title: title || question[lang].slice(0, 60),
@@ -232,15 +295,22 @@ function NewStoryContent() {
       image_url,
       photo_caption: photoCaption || null,
       language: lang,
-      visibility: 'family',
+      visibility: 'private',
+      is_public: false,
     }).select().single();
 
-    if (error) {
-      alert(lang === 'vi' ? 'Không thể lưu câu chuyện. Vui lòng thử lại.' : 'Could not save story. Please try again.');
-    } else if (story) {
-      router.push(`/story/${story.id}`);
+    if (error || !story) {
+      if (audio_url) await supabase.storage.from('audio').remove([audio_url]);
+      if (image_url) await supabase.storage.from('photos').remove([image_url]);
+      setSaveError(lang === 'vi'
+        ? 'Không thể lưu câu chuyện. Nội dung vẫn còn ở đây, vui lòng thử lại.'
+        : 'Could not save the story. Everything is still here. Please try again.');
+      setSaving(false);
+      return;
     }
-    setSaving(false);
+
+    await clearDraft('story-new');
+    router.push(`/story/${story.id}`);
   };
 
   const meta = categoryMeta[category];
@@ -261,6 +331,35 @@ function NewStoryContent() {
       </header>
 
       <main className={styles.main}>
+        {restorableDraft && (
+          <div role="status" style={{
+            background: '#FFF7ED',
+            border: '1px solid #FED7AA',
+            borderRadius: 'var(--radius-lg)',
+            padding: '1rem 1.25rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+          }}>
+            <p style={{ margin: 0, color: '#9A3412', fontSize: 'var(--text-base)' }}>
+              {restorableDraft.audio
+                ? (lang === 'vi' ? 'Bạn có một bản ghi âm chưa lưu trên trình duyệt này.' : 'You have an unsaved recording in this browser.')
+                : (lang === 'vi' ? 'Bạn có một bản nháp chưa lưu trên trình duyệt này.' : 'You have an unsaved draft in this browser.')}
+            </p>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button type="button" className="btn btn-primary btn-sm" onClick={handleRestoreDraft}>
+                {lang === 'vi' ? 'Khôi phục' : 'Restore'}
+              </button>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={handleDiscardDraft}>
+                {lang === 'vi' ? 'Xóa' : 'Discard'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Step 1: Choose Category */}
         {step === 'category' && (
           <div className={styles.stepWrap}>
@@ -455,6 +554,40 @@ function NewStoryContent() {
                     placeholder={lang === 'vi' ? 'Bản chép lời giọng nói sẽ hiển thị tại đây khi ghi âm...' : 'Speech-to-text transcript will appear here while recording...'}
                     style={{ fontSize: '0.9rem', lineHeight: 1.6 }}
                   />
+                </div>
+              )}
+
+              {localBackupFailed && (
+                <p role="status" style={{ margin: 0, color: '#9A3412', fontSize: 'var(--text-sm)', lineHeight: 1.5 }}>
+                  {lang === 'vi'
+                    ? 'Trình duyệt này không lưu tạm được bản ghi âm. Hãy bấm Lưu ngay, hoặc tải bản ghi về máy trước khi rời trang.'
+                    : 'This browser could not keep a backup of the recording. Save now, or download it before leaving this page.'}
+                </p>
+              )}
+
+              {saveError && (
+                <div role="alert" style={{
+                  background: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.85rem 1rem',
+                  color: '#991B1B',
+                  fontSize: 'var(--text-sm)',
+                  lineHeight: 1.5,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                }}>
+                  <span>{saveError}</span>
+                  {audioUrl && (
+                    <a
+                      href={audioUrl}
+                      download={`kyuc-recording.${audioBlob?.type.includes('mp4') ? 'm4a' : 'webm'}`}
+                      style={{ color: 'var(--color-brand)', fontWeight: 600 }}
+                    >
+                      {lang === 'vi' ? 'Tải bản ghi âm về máy' : 'Download the recording'}
+                    </a>
+                  )}
                 </div>
               )}
 
