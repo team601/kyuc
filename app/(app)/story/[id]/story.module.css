@@ -93,3 +93,26 @@
   padding-top: 16px;
   border-top: 1px solid var(--color-sand);
 }
+
+.transcribing {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: var(--color-blush);
+  font-size: 15px;
+  color: var(--color-ink);
+}
+.dots { display: inline-flex; gap: 4px; }
+.dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-brand-light);
+  animation: dot 1.2s ease-in-out infinite;
+}
+.dots span:nth-child(2) { animation-delay: 0.15s; }
+.dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes dot { 0%, 80%, 100% { opacity: 0.3; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .dots span { animation: none; } }

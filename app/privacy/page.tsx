@@ -34,10 +34,10 @@ export default function PrivacyPage() {
 
         <h2>3. Sử dụng Trí tuệ Nhân tạo (AI) và Chép Lời</h2>
         <p>
-          Nếu bạn chọn sử dụng tính năng chuyển giọng nói thành văn bản (Speech-to-Text), dữ liệu âm thanh chỉ được xử lý tạm thời để tạo bản ghi chữ cho bạn. Chúng tôi cam kết:
+          Khi bạn lưu một bản ghi âm, Kyuc gửi tệp âm thanh tới Groq (nhà cung cấp mô hình nhận dạng giọng nói Whisper) để chép lời thành chữ. Tệp chỉ được dùng để tạo bản chép lời rồi trả kết quả về Kyuc. Chúng tôi cam kết:
         </p>
         <ul>
-          <li>Dữ liệu giọng nói của bạn <strong>không bao giờ</strong> được dùng để huấn luyện mô hình ngôn ngữ hoặc mô hình giọng nói AI.</li>
+          <li>Kyuc <strong>không</strong> dùng giọng nói của bạn để huấn luyện mô hình AI, và chỉ chọn nhà cung cấp có cam kết không huấn luyện trên dữ liệu gửi qua API.</li>
           <li>Chỉ có bạn và những người thân bạn chủ động chia sẻ mới có quyền đọc bản chép lời.</li>
         </ul>
 
@@ -83,10 +83,10 @@ export default function PrivacyPage() {
 
       <h2>3. Artificial Intelligence & Transcription</h2>
       <p>
-        When you use voice-to-text or transcription features, audio is processed solely to generate your memory transcript. We guarantee:
+        When you save a recording, Kyuc sends the audio file to Groq (the provider running the Whisper speech recognition model) to turn it into text. The file is used only to produce your transcript, which is returned to Kyuc. We guarantee:
       </p>
       <ul>
-        <li>Your voice data is <strong>never</strong> used to train AI models or speech synthesizers.</li>
+        <li>Kyuc does <strong>not</strong> use your voice to train AI models, and only uses providers that commit not to train on data sent through their API.</li>
         <li>Only you and family members you explicitly invite can view the resulting transcripts.</li>
       </ul>
 

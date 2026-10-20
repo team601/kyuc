@@ -113,7 +113,6 @@
 .recStop { width: 30px; height: 30px; border-radius: 8px; background: #fff; }
 
 .transcript { margin-top: 4px; }
-.listening { color: var(--color-brand); }
 .serifText { font-family: var(--font-serif); font-size: 17px; line-height: 1.7; }
 
 .details {

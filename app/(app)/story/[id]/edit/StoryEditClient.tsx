@@ -45,45 +45,28 @@ export function StoryEditClient({ story }: { story: Story }) {
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Web Speech API for transcript dictation
-  const [isListening, setIsListening] = useState(false);
+  // Chép lại lời từ bản ghi trên server (Whisper qua Groq)
+  const [retranscribing, setRetranscribing] = useState(false);
 
-  const toggleListening = () => {
-    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      alert(lang === 'vi' ? 'Trình duyệt của bạn chưa hỗ trợ nhận diện giọng nói trực tiếp.' : 'Your browser does not support Web Speech Recognition.');
-      return;
-    }
-
-    if (isListening) {
-      setIsListening(false);
-      return;
-    }
-
+  const handleRetranscribe = async () => {
+    if (audioTranscript.trim() && !window.confirm(lang === 'vi'
+      ? 'Chép lại sẽ thay bản chép lời hiện tại, kể cả chỗ bạn đã sửa. Tiếp tục?'
+      : 'This replaces the current transcript, including your edits. Continue?')) return;
+    setRetranscribing(true);
+    setMessage(null);
     try {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = lang === 'vi' ? 'vi-VN' : 'en-US';
-
-      recognition.onstart = () => setIsListening(true);
-      recognition.onresult = (event: any) => {
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript + ' ';
-          }
-        }
-        if (finalTranscript) {
-          setAudioTranscript(prev => (prev ? prev + ' ' : '') + finalTranscript.trim());
-        }
-      };
-      recognition.onerror = () => setIsListening(false);
-      recognition.onend = () => setIsListening(false);
-
-      recognition.start();
+      const res = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storyId: story.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.transcript) throw new Error();
+      setAudioTranscript(data.transcript);
     } catch {
-      setIsListening(false);
+      setMessage({ type: 'error', text: lang === 'vi' ? 'Chưa chép lời được, vui lòng thử lại.' : 'Could not transcribe yet. Please try again.' });
+    } finally {
+      setRetranscribing(false);
     }
   };
 
@@ -258,22 +241,27 @@ export function StoryEditClient({ story }: { story: Story }) {
               <label className={styles.label}>
                 {bt.story.audioTranscript}
               </label>
-              <button
-                type="button"
-                onClick={toggleListening}
-                style={{
-                  background: isListening ? '#FEE2E2' : '#F3F4F6',
-                  color: isListening ? '#DC2626' : '#4B5563',
-                  border: 'none',
-                  borderRadius: '9999px',
-                  padding: '0.2rem 0.6rem',
-                  fontSize: '0.75rem',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                }}
-              >
-                {isListening ? bt.story.speechToTextActive : `🎙 ${bt.story.speechToTextHint}`}
-              </button>
+              {story.audio_url && (
+                <button
+                  type="button"
+                  onClick={handleRetranscribe}
+                  disabled={retranscribing}
+                  style={{
+                    background: 'var(--color-blush)',
+                    color: 'var(--color-brand-dark)',
+                    border: 'none',
+                    borderRadius: '9999px',
+                    padding: '0.3rem 0.75rem',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                  }}
+                >
+                  {retranscribing
+                    ? (lang === 'vi' ? 'Đang chép lời…' : 'Transcribing…')
+                    : (lang === 'vi' ? 'Chép lại từ bản ghi' : 'Transcribe recording')}
+                </button>
+              )}
             </div>
             <textarea
               rows={4}
