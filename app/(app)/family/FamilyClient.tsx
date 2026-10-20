@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { backendTranslations } from '@/lib/translations';
-import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
+import { AppShell } from '@/components/app/AppShell';
 import { createClient } from '@/lib/supabase/client';
+import { mediaSrc, storagePathFrom } from '@/lib/media';
 import styles from './family.module.css';
 
 interface FamilyMember {
@@ -193,12 +194,14 @@ export function FamilyClient({
     setEditError(null);
 
     try {
-      let finalAvatarUrl = editAvatarUrl;
+      // Store the storage path (private bucket), never a public URL.
+      let finalAvatarUrl = storagePathFrom(editAvatarUrl, 'photos') ?? editAvatarUrl;
 
       if (editAvatarFile) {
         const supabase = createClient();
-        const ext = editAvatarFile.name.split('.').pop() || 'webp';
-        const filePath = `avatars/${editingMember.id}-${Date.now()}.${ext}`;
+        const ext = (editAvatarFile.name.split('.').pop() || 'webp').replace(/[^A-Za-z0-9]/g, '') || 'webp';
+        // First folder must be the uploader's id to satisfy the storage insert policy.
+        const filePath = `${currentUser.id}/avatars/${editingMember.id}-${Date.now()}.${ext}`;
         const { data: uploadData, error: uploadErr } = await supabase.storage
           .from('photos')
           .upload(filePath, editAvatarFile, { contentType: editAvatarFile.type });
@@ -206,10 +209,10 @@ export function FamilyClient({
         if (uploadErr) {
           throw new Error(uploadErr.message);
         }
-        if (uploadData) {
-          const { data: urlData } = supabase.storage.from('photos').getPublicUrl(uploadData.path);
-          finalAvatarUrl = urlData.publicUrl;
+        if (!uploadData) {
+          throw new Error(lang === 'vi' ? 'Không tải được ảnh lên. Vui lòng thử lại.' : 'Photo upload failed. Please try again.');
         }
+        finalAvatarUrl = uploadData.path;
       }
 
       const res = await fetch('/api/family/member', {
@@ -235,7 +238,7 @@ export function FamilyClient({
                 ...m,
                 displayName: editName.trim() || m.displayName,
                 role: editRole.trim() || null,
-                avatarUrl: finalAvatarUrl,
+                avatarUrl: mediaSrc(finalAvatarUrl, 'photos') ?? finalAvatarUrl,
               }
             : m
         )
@@ -295,35 +298,8 @@ export function FamilyClient({
   }, [pendingInvites]);
 
   return (
-    <div className={styles.page}>
-      {/* Header */}
-      <header className={styles.header}>
-        <Link href="/dashboard" className={styles.back}>
-          {bt.family.backToDashboard}
-        </Link>
-        <Link href="/" className={styles.logo}>
-          kyuc<span>.ai</span>
-        </Link>
-        <div className={styles.headerRight}>
-          <LanguageSwitcher />
-          <form action="/auth/signout" method="POST">
-            <button type="submit" style={{
-              background: 'none',
-              border: 'none',
-              color: '#DC2626',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 500,
-              cursor: 'pointer',
-              padding: '0.4rem 0.8rem',
-              borderRadius: 'var(--radius-md)',
-            }}>
-              {bt.nav.signOut}
-            </button>
-          </form>
-        </div>
-      </header>
-
-      <main className={styles.main}>
+    <AppShell active="family" wide>
+      <div className={styles.main}>
         {/* Hero */}
         <div className={styles.hero}>
           <div className={styles.heroIcon}>👨‍👩‍👧‍👦</div>
@@ -431,11 +407,11 @@ export function FamilyClient({
                       )}
                     </p>
                     <p className={styles.memberRole}>{member.role || (lang === 'vi' ? 'Người thân' : 'Family')}</p>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginTop: '0.25rem' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
                       <span className={`${styles.memberStatus} ${member.status === 'accepted' ? styles.statusAccepted : styles.statusPending}`}>
                         {member.status === 'accepted' ? `✓ ${bt.family.acceptedStatus}` : `⏳ ${bt.family.pendingStatus}`}
                       </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.35rem' }}>
                         {!member.isOwner && (
                           <>
                             <button
@@ -559,9 +535,9 @@ export function FamilyClient({
                     transition: 'transform 0.15s ease, box-shadow 0.15s ease',
                   }}
                 >
-                  {story.image_url && (
+                  {mediaSrc(story.image_url, 'photos') && (
                     <img
-                      src={story.image_url}
+                      src={mediaSrc(story.image_url, 'photos')!}
                       alt={story.title}
                       style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: 'var(--radius-lg)' }}
                     />
@@ -583,7 +559,7 @@ export function FamilyClient({
             </div>
           )}
         </section>
-      </main>
+      </div>
 
       {/* Invite Modal */}
       {showInviteModal && (
@@ -793,6 +769,6 @@ export function FamilyClient({
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

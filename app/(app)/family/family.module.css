@@ -46,7 +46,7 @@
 .main {
   max-width: 860px;
   margin: 0 auto;
-  padding: 3rem 1.5rem 6rem;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
@@ -205,6 +205,7 @@
 }
 
 .memberStatus {
+  white-space: nowrap;
   font-size: 0.75rem;
   display: inline-block;
   padding: 0.15rem 0.5rem;
@@ -301,4 +302,12 @@
   justify-content: flex-end;
   gap: 0.75rem;
   margin-top: 0.5rem;
+}
+
+/* Khung app (AppShell) đã lo lề trang và thanh điều hướng */
+@media (max-width: 760px) {
+  .main { gap: 1.75rem; }
+}
+@media (max-width: 760px) {
+  .heroIcon { display: none; }
 }

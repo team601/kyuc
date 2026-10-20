@@ -266,3 +266,115 @@ create index if not exists idx_family_members_owner on public.family_members(own
 create index if not exists idx_family_members_lookup on public.family_members(member_email, member_id, status);
 
 
+-- ─────────────────────────────────────────────────────────────
+
+-- 9. P0 data safety (Oct 2026)
+-- Run this whole file again in Supabase Dashboard > SQL Editor (idempotent).
+
+-- 9a. Story media is read through short-lived signed URLs (app route /api/media).
+-- stories.audio_url / image_url now hold the storage PATH ("<uid>/<file>");
+-- older rows hold a full public URL ending in "/audio/<path>" or "/photos/<path>".
+-- Read access follows story visibility: the subquery runs under the viewer's
+-- stories RLS, so owners, accepted family members and (for public stories) anyone qualify.
+drop policy if exists "Users can read own audio or public stories" on storage.objects;
+drop policy if exists "Story audio readable by story viewers" on storage.objects;
+create policy "Story audio readable by story viewers"
+  on storage.objects for select
+  using (
+    bucket_id = 'audio'
+    and (
+      auth.uid()::text = (storage.foldername(name))[1]
+      or exists (
+        select 1 from public.stories s
+        where s.audio_url = name
+           or s.audio_url like '%/audio/' || name
+      )
+    )
+  );
+
+drop policy if exists "Users can read own photos or public stories" on storage.objects;
+drop policy if exists "Story photos readable by story viewers" on storage.objects;
+create policy "Story photos readable by story viewers"
+  on storage.objects for select
+  using (
+    bucket_id = 'photos'
+    and (
+      auth.uid()::text = (storage.foldername(name))[1]
+      or exists (
+        select 1 from public.stories s
+        where s.image_url = name
+           or s.image_url like '%/photos/' || name
+      )
+      or exists (
+        select 1 from public.family_members fm
+        where fm.custom_avatar_url = name
+           or fm.custom_avatar_url like '%/photos/' || name
+      )
+    )
+  );
+
+-- 9b. Invitees may only accept/decline and link themselves (status, member_id).
+drop policy if exists "Invited members can update their invitation status" on public.family_members;
+create policy "Invited members can update their invitation status"
+  on public.family_members for update
+  using (
+    lower(member_email) = lower(auth.jwt() ->> 'email') or
+    member_id = auth.uid()
+  )
+  with check (
+    lower(member_email) = lower(auth.jwt() ->> 'email') or
+    member_id = auth.uid()
+  );
+
+create or replace function public.guard_family_member_update()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  -- Circle owner, or a privileged context (SQL editor / service role) with no auth.uid().
+  if auth.uid() is null or auth.uid() = old.owner_id then
+    return new;
+  end if;
+
+  if (to_jsonb(new) - 'status' - 'member_id') is distinct from (to_jsonb(old) - 'status' - 'member_id') then
+    raise exception 'Only the circle owner can change this invitation' using errcode = '42501';
+  end if;
+
+  if new.member_id is distinct from old.member_id and new.member_id is distinct from auth.uid() then
+    raise exception 'An invitee can only link the invitation to themselves' using errcode = '42501';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists guard_family_member_update on public.family_members;
+create trigger guard_family_member_update
+  before update on public.family_members
+  for each row execute procedure public.guard_family_member_update();
+
+-- 9c. Self-service account deletion (called by /api/account/delete after it removes
+-- the user's storage files). Deleting the auth user cascades to profiles and stories.
+create or replace function public.delete_my_account()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  uid uuid := auth.uid();
+begin
+  if uid is null then
+    raise exception 'Not authenticated' using errcode = '42501';
+  end if;
+
+  delete from public.family_members where owner_id = uid or member_id = uid;
+  delete from public.stories where user_id = uid;
+  delete from public.profiles where id = uid;
+  delete from auth.users where id = uid;
+end;
+$$;
+
+revoke all on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;

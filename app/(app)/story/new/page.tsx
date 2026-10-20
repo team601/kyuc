@@ -1,27 +1,33 @@
 'use client';
 
-import { useState, useRef, useCallback, Suspense } from 'react';
+import { useState, useRef, useCallback, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { getRandomQuestion, categoryMeta, type Category } from '@/lib/questions';
+import { getRandomQuestion, categoryMeta, questions, type Category, type Question } from '@/lib/questions';
+import { saveDraft, loadDraft, clearDraft, draftHasContent, type StoryDraft } from '@/lib/draftStore';
+import { uploadStoryAudio, uploadStoryPhoto, UploadError } from '@/lib/storageUpload';
+import { useUnsavedGuard } from '@/lib/useUnsavedGuard';
 import PhotoUploader from '@/components/story/PhotoUploader';
 import { AudioPlayer } from '@/components/story/AudioPlayer';
 import { useLanguage } from '@/lib/LanguageContext';
 import { backendTranslations } from '@/lib/translations';
-import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
+import { AppShell } from '@/components/app/AppShell';
+import { categoryTone } from '@/components/app/storyMeta';
+import a from '@/components/app/app.module.css';
 import styles from './new.module.css';
 
 function NewStoryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialCat = (searchParams.get('category') as Category) || 'roots';
+  // ?q=<id> từ "Câu hỏi hôm nay" ở dashboard: vào thẳng bước ghi âm với đúng câu hỏi đó
+  const initialQuestion = questions.find(q => q.id === searchParams.get('q'));
 
-  const { lang, setLang } = useLanguage();
+  const { lang } = useLanguage();
   const bt = backendTranslations[lang];
 
-  const [category, setCategory] = useState<Category>(initialCat);
-  const [question, setQuestion] = useState(() => getRandomQuestion(initialCat));
+  const [category, setCategory] = useState<Category>(initialQuestion?.category ?? initialCat);
+  const [question, setQuestion] = useState<Question>(() => initialQuestion ?? getRandomQuestion(initialCat));
   const [title, setTitle] = useState('');
   const [storyText, setStoryText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -32,7 +38,79 @@ function NewStoryContent() {
   const [photoCaption, setPhotoCaption] = useState('');
   const [audioTranscript, setAudioTranscript] = useState('');
   const [saving, setSaving] = useState(false);
-  const [step, setStep] = useState<'category' | 'record' | 'save'>('category');
+  const [step, setStep] = useState<'category' | 'record' | 'save'>(initialQuestion ? 'record' : 'category');
+  const [showWriting, setShowWriting] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [restorableDraft, setRestorableDraft] = useState<StoryDraft | null>(null);
+  const [draftChecked, setDraftChecked] = useState(false);
+  const [localBackupFailed, setLocalBackupFailed] = useState(false);
+
+  const hasUnsavedWork = isRecording || !!audioBlob || !!storyText.trim() || !!audioTranscript.trim();
+  useUnsavedGuard(hasUnsavedWork && !saving);
+
+  // Offer to restore an unsaved draft from an earlier visit (refresh, crash, failed upload).
+  useEffect(() => {
+    loadDraft('story-new').then(draft => {
+      if (draftHasContent(draft)) setRestorableDraft(draft);
+      setDraftChecked(true);
+    });
+  }, []);
+
+  // Keep a local backup of unsaved work in this browser until it is saved to the account.
+  // Paused while an older draft is waiting to be restored or discarded, so it is never overwritten.
+  useEffect(() => {
+    if (!draftChecked || restorableDraft || isRecording) return;
+    if (!audioBlob && !storyText.trim() && !audioTranscript.trim()) return;
+    const timer = setTimeout(() => {
+      saveDraft('story-new', {
+        audio: audioBlob,
+        audioMime: audioBlob?.type ?? null,
+        text: storyText,
+        title,
+        transcript: audioTranscript,
+        photoCaption,
+        category,
+        questionId: question.id,
+        questionEn: question.en,
+        questionVi: question.vi,
+        savedAt: Date.now(),
+      }).then(ok => setLocalBackupFailed(!ok && !!audioBlob));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [draftChecked, restorableDraft, isRecording, audioBlob, storyText, title, audioTranscript, photoCaption, category, question]);
+
+  const handleRestoreDraft = () => {
+    const draft = restorableDraft;
+    if (!draft) return;
+    const cat = (draft.category && draft.category in categoryMeta ? draft.category : category) as Category;
+    const restoredQuestion: Question =
+      questions.find(q => q.id === draft.questionId) ||
+      (draft.questionEn || draft.questionVi
+        ? { id: draft.questionId || 'restored', category: cat, en: draft.questionEn || draft.questionVi || '', vi: draft.questionVi || draft.questionEn || '' }
+        : question);
+    setCategory(cat);
+    setQuestion(restoredQuestion);
+    setStoryText(draft.text || '');
+    if (draft.text?.trim()) setShowWriting(true);
+    setTitle(draft.title || '');
+    setAudioTranscript(draft.transcript || '');
+    setPhotoCaption(draft.photoCaption || '');
+    if (draft.audio) {
+      setAudioBlob(draft.audio);
+      setAudioUrl(URL.createObjectURL(draft.audio));
+    }
+    setRestorableDraft(null);
+    setStep('record');
+  };
+
+  const handleDiscardDraft = async () => {
+    const msg = restorableDraft?.audio
+      ? (lang === 'vi' ? 'Xóa bản ghi âm chưa lưu này? Không thể khôi phục lại.' : 'Delete this unsaved recording? This cannot be undone.')
+      : (lang === 'vi' ? 'Xóa bản nháp chưa lưu này?' : 'Delete this unsaved draft?');
+    if (!window.confirm(msg)) return;
+    await clearDraft('story-new');
+    setRestorableDraft(null);
+  };
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recognitionRef = useRef<any>(null);
@@ -46,6 +124,9 @@ function NewStoryContent() {
   };
 
   const handleNextQuestion = () => {
+    if (audioBlob && !window.confirm(lang === 'vi'
+      ? 'Đổi câu hỏi sẽ bỏ bản ghi âm hiện tại. Bạn chắc chứ?'
+      : 'Changing the question discards the current recording. Continue?')) return;
     setQuestion(getRandomQuestion(category));
     setStoryText('');
     setAudioTranscript('');
@@ -177,49 +258,36 @@ function NewStoryContent() {
       return;
     }
     setSaving(true);
+    setSaveError(null);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.push('/login'); return; }
-
-    let audio_url = null;
-    let image_url = null;
-
-    // Upload audio if exists
-    if (audioBlob) {
-      if (audioBlob.size > 50 * 1024 * 1024) {
-        alert(lang === 'vi' ? 'Bản ghi âm vượt quá dung lượng tối đa (50MB).' : 'Audio recording exceeds the 50MB limit.');
-        setSaving(false);
-        return;
-      }
-      const isMp4 = audioBlob.type.includes('mp4') || audioBlob.type.includes('aac');
-      const isOgg = audioBlob.type.includes('ogg');
-      const isWav = audioBlob.type.includes('wav');
-      const ext = isMp4 ? 'm4a' : isOgg ? 'ogg' : isWav ? 'wav' : 'webm';
-      const fileName = `${user.id}/${Date.now()}.${ext}`;
-      const uploadMime = audioBlob.type || (isMp4 ? 'audio/mp4' : 'audio/webm');
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('audio')
-        .upload(fileName, audioBlob, { contentType: uploadMime });
-      if (!uploadError && uploadData) {
-        const { data: urlData } = supabase.storage.from('audio').getPublicUrl(uploadData.path);
-        audio_url = urlData.publicUrl;
-      }
+    if (!user) {
+      // The draft is backed up in this browser and can be restored after signing in.
+      setSaving(false);
+      router.push('/login');
+      return;
     }
 
-    // Upload photo if exists
-    if (photoFile) {
-      const ext = photoFile.name.split('.').pop() || 'webp';
-      const photoPath = `${user.id}/${Date.now()}.${ext}`;
-      const { data: photoData, error: photoError } = await supabase.storage
-        .from('photos')
-        .upload(photoPath, photoFile, { contentType: photoFile.type });
-      if (!photoError && photoData) {
-        const { data: urlData } = supabase.storage.from('photos').getPublicUrl(photoData.path);
-        image_url = urlData.publicUrl;
-      }
+    let audio_url: string | null = null;
+    let image_url: string | null = null;
+
+    // Never save a story whose media failed to upload: keep everything on screen and let the user retry.
+    try {
+      if (audioBlob) audio_url = await uploadStoryAudio(supabase, user.id, audioBlob);
+      if (photoFile) image_url = await uploadStoryPhoto(supabase, user.id, photoFile);
+    } catch (err) {
+      const tooLarge = err instanceof UploadError && err.message === 'too_large';
+      setSaveError(tooLarge
+        ? (lang === 'vi' ? 'Bản ghi âm vượt quá dung lượng tối đa (50MB). Hãy tải bản ghi về máy để giữ lại.' : 'The recording is over the 50MB limit. Please download it to keep a copy.')
+        : (lang === 'vi'
+          ? 'Chưa tải lên được. Bản ghi âm vẫn còn ở đây, vui lòng kiểm tra kết nối và bấm Lưu lại.'
+          : 'Upload failed. Your recording is still here. Check your connection and press Save again.'));
+      if (audio_url) await supabase.storage.from('audio').remove([audio_url]);
+      setSaving(false);
+      return;
     }
 
-    // Save story
+    // New stories are private until the storyteller chooses to share them.
     const { data: story, error } = await supabase.from('stories').insert({
       user_id: user.id,
       title: title || question[lang].slice(0, 60),
@@ -232,247 +300,253 @@ function NewStoryContent() {
       image_url,
       photo_caption: photoCaption || null,
       language: lang,
-      visibility: 'family',
+      visibility: 'private',
+      is_public: false,
     }).select().single();
 
-    if (error) {
-      alert(lang === 'vi' ? 'Không thể lưu câu chuyện. Vui lòng thử lại.' : 'Could not save story. Please try again.');
-    } else if (story) {
-      router.push(`/story/${story.id}`);
+    if (error || !story) {
+      if (audio_url) await supabase.storage.from('audio').remove([audio_url]);
+      if (image_url) await supabase.storage.from('photos').remove([image_url]);
+      setSaveError(lang === 'vi'
+        ? 'Không thể lưu câu chuyện. Nội dung vẫn còn ở đây, vui lòng thử lại.'
+        : 'Could not save the story. Everything is still here. Please try again.');
+      setSaving(false);
+      return;
     }
-    setSaving(false);
+
+    await clearDraft('story-new');
+    router.push(`/story/${story.id}`);
   };
 
-  const meta = categoryMeta[category];
+  const vi = lang === 'vi';
+  const hasAnswer = !!audioUrl || !!storyText.trim();
+
+  const handleRecordPress = () => {
+    if (isRecording) {
+      stopRecording();
+      return;
+    }
+    if (audioBlob && !window.confirm(vi
+      ? 'Ghi lại sẽ thay bản ghi âm hiện tại. Bạn chắc chứ?'
+      : 'Recording again replaces the current recording. Continue?')) return;
+    startRecording();
+  };
 
   return (
-    <div className={styles.page}>
-      {/* Header */}
-      <header className={styles.header}>
-        <Link href="/dashboard" className={styles.back}>
-          {bt.newStory.backToStories}
-        </Link>
-        <Link href="/" className={styles.logo}>
-          kyuc<span>.ai</span>
-        </Link>
-        <div className={styles.headerLangWrap}>
-          <LanguageSwitcher />
-        </div>
-      </header>
-
-      <main className={styles.main}>
-        {/* Step 1: Choose Category */}
-        {step === 'category' && (
-          <div className={styles.stepWrap}>
-            <p className="section-label">{bt.newStory.stepCategory.eyebrow}</p>
-            <h1 className={styles.stepTitle}>{bt.newStory.stepCategory.title}</h1>
-            <p className={styles.stepDesc}>{bt.newStory.stepCategory.desc}</p>
-
-            <div className={styles.categoryGrid}>
-              {(Object.keys(categoryMeta) as Category[]).map(cat => {
-                const m = categoryMeta[cat];
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => handleCategorySelect(cat)}
-                    className={styles.categoryCard}
-                    style={{ background: m.color }}
-                  >
-                    <span className={styles.catNumber}>{m.number}</span>
-                    <h3 className={styles.catLabel}>{m.label[lang]}</h3>
-                    <p className={styles.catTagline}>{m.tagline[lang]}</p>
-                    <p className={styles.catSample}>{m.sampleQuestion[lang]}</p>
-                  </button>
-                );
-              })}
-            </div>
+    <AppShell active="new" back={{ href: '/dashboard', label: vi ? 'Câu chuyện' : 'Stories' }}>
+      {restorableDraft && (
+        <div role="status" className={`${a.notice} ${a.noticeWarm} ${styles.notice}`}>
+          <span>
+            {restorableDraft.audio
+              ? (vi ? 'Bạn có một bản ghi âm chưa lưu trên trình duyệt này.' : 'You have an unsaved recording in this browser.')
+              : (vi ? 'Bạn có một bản nháp chưa lưu trên trình duyệt này.' : 'You have an unsaved draft in this browser.')}
+          </span>
+          <div className={a.pillRow}>
+            <button type="button" className={`${a.pill} ${a.pillCoral} ${a.pillSm}`} onClick={handleRestoreDraft}>
+              {vi ? 'Khôi phục' : 'Restore'}
+            </button>
+            <button type="button" className={`${a.pill} ${a.pillSoft} ${a.pillSm}`} onClick={handleDiscardDraft}>
+              {vi ? 'Xóa' : 'Discard'}
+            </button>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Step 2: Record */}
-        {step === 'record' && (
-          <div className={styles.recordWrap}>
-            <div className={styles.recordLeft}>
-              <p className="section-label" style={{ color: 'var(--color-brand)' }}>
-                {meta.number} — {meta.label[lang].toUpperCase()}
-              </p>
-              <h2 className={styles.recordTitle}>
-                {bt.newStory.stepRecord.title}
-              </h2>
-              <p className={styles.recordDesc}>
-                {bt.newStory.stepRecord.desc}
-              </p>
+      {/* Bước 1: chọn chủ đề */}
+      {step === 'category' && (
+        <div className={`${styles.stepWrap} ${a.screenIn}`}>
+          <span className={styles.progress}><span className={styles.progressFill} style={{ width: '33%' }} /></span>
+          <h1 className={a.title}>{bt.newStory.stepCategory.title}</h1>
+          <p className={a.muted}>{bt.newStory.stepCategory.desc}</p>
 
-              {/* Language toggle — synced with LanguageContext */}
-              <div className={styles.langRow}>
+          <div className={styles.categoryList}>
+            {(Object.keys(categoryMeta) as Category[]).map((cat, i) => {
+              const m = categoryMeta[cat];
+              const tone = categoryTone(cat);
+              return (
                 <button
-                  className={lang === 'en' ? styles.langActive : styles.langBtn}
-                  onClick={() => setLang('en')}
-                >🇬🇧 English</button>
-                <button
-                  className={lang === 'vi' ? styles.langActive : styles.langBtn}
-                  onClick={() => setLang('vi')}
-                >🇻🇳 Tiếng Việt</button>
-              </div>
+                  key={cat}
+                  onClick={() => handleCategorySelect(cat)}
+                  className={`${styles.categoryCard} ${tone.className} ${[a.pop1, a.pop2, a.pop3][i] ?? ''}`}
+                >
+                  <span className={styles.catTop}>
+                    <span className={styles.catLabel}>{tone[lang]}</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M5 12h14M13 6l6 6-6 6" />
+                    </svg>
+                  </span>
+                  <span className={styles.catTagline}>{m.tagline[lang]}</span>
+                  <span className={styles.catSample}>{m.sampleQuestion[lang]}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
+      {/* Bước 2: ghi âm */}
+      {step === 'record' && (
+        <div className={`${styles.recordWrap} ${a.screenIn}`}>
+          <span className={styles.progress}><span className={styles.progressFill} style={{ width: hasAnswer ? '100%' : '66%' }} /></span>
+
+          <div className={styles.topicRow}>
+            <span className={`${a.tag} ${categoryTone(category).className}`}>{categoryTone(category)[lang]}</span>
+            <button onClick={() => setStep('category')} className={styles.linkBtn} disabled={isRecording}>
+              {vi ? 'Đổi chủ đề' : 'Change topic'}
+            </button>
+          </div>
+
+          <div className={styles.center}>
+            <h1 className={styles.recQuestion}>{question[lang]}</h1>
+            <button onClick={handleNextQuestion} className={styles.linkBtn} disabled={isRecording}>
+              {bt.newStory.stepRecord.anotherPrompt}
+            </button>
+            <p className={a.muted}>
+              {vi ? 'Cứ kể tự nhiên như đang nói chuyện. Không cần hoàn hảo.' : 'Just talk, the way you would at the table. It does not need to be perfect.'}
+            </p>
+
+            <span className={`${styles.wave} ${isRecording ? styles.waveLive : ''}`} aria-hidden="true">
+              {WAVE.map((h, i) => (
+                <span key={i} className={styles.bar} style={{ height: h, animationDelay: `${i * 0.12}s` }} />
+              ))}
+            </span>
+
+            <span className={`${styles.recStatus} ${isRecording ? styles.recStatusLive : ''}`} aria-live="polite">
+              {isRecording
+                ? `● ${vi ? 'Đang ghi' : 'Recording'} ${formatTime(recordingTime)}`
+                : audioUrl
+                  ? `${bt.newStory.stepRecord.recorded} ${formatTime(recordingTime)}`
+                  : (vi ? 'Chạm để bắt đầu ghi âm' : 'Tap to start recording')}
+            </span>
+
+            <button
+              type="button"
+              className={`${styles.recBtn} ${isRecording ? styles.recBtnLive : ''}`}
+              onClick={handleRecordPress}
+              aria-label={isRecording
+                ? (vi ? 'Dừng ghi âm' : 'Stop recording')
+                : audioUrl ? (vi ? 'Ghi lại' : 'Record again') : (vi ? 'Bắt đầu ghi âm' : 'Start recording')}
+            >
+              <span className={isRecording ? styles.recStop : styles.recDot} />
+            </button>
+            {audioUrl && !isRecording && (
+              <span className={a.small}>{vi ? 'Chạm nút để ghi lại' : 'Tap to record again'}</span>
+            )}
+          </div>
+
+          {micError && (
+            <div className={`${a.notice} ${a.noticeError}`} role="alert">
+              <span>{micError}</span>
               <button
-                onClick={() => setStep('category')}
-                className={styles.changeCategory}
+                type="button"
+                className={a.noticeLink}
+                onClick={() => {
+                  setShowWriting(true);
+                  setTimeout(() => document.getElementById('story-text-input')?.focus(), 50);
+                }}
               >
-                {bt.newStory.stepRecord.changeTheme}
+                {vi ? 'Viết câu chuyện thay vì ghi âm' : 'Write the story instead'}
               </button>
             </div>
+          )}
 
-            <div className={styles.recordCard}>
-              {/* Question */}
-              <div className={styles.questionBox}>
-                <p className={styles.questionLabel}>{meta.label[lang]}</p>
-                <h3 className={styles.question}>{question[lang]}</h3>
-                <button onClick={handleNextQuestion} className={styles.nextQ}>
-                  {bt.newStory.stepRecord.anotherPrompt}
-                </button>
-              </div>
+          {audioUrl && !isRecording && (
+            <div className={`${a.stack} ${a.pop1}`}>
+              <AudioPlayer src={audioUrl} title={vi ? 'Bản ghi vừa xong' : 'Your recording'} />
+            </div>
+          )}
 
-              {/* Title */}
-              <div>
-                <label className="form-label" htmlFor="story-title">{bt.newStory.stepRecord.titleLabel}</label>
-                <input
-                  id="story-title"
-                  type="text"
-                  className="form-input"
-                  placeholder={bt.newStory.stepRecord.titlePlaceholder}
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                />
-              </div>
+          {(isRecording || audioTranscript || audioUrl) && (
+            <div className={`${a.field} ${styles.transcript}`}>
+              <label className={a.fieldLabel} htmlFor="story-transcript">
+                {bt.story.audioTranscript}
+                {isRecording && <span className={styles.listening}> · {vi ? 'đang nghe…' : 'listening…'}</span>}
+              </label>
+              <textarea
+                id="story-transcript"
+                rows={4}
+                className={`${a.textarea} ${styles.serifText}`}
+                value={audioTranscript}
+                onChange={e => setAudioTranscript(e.target.value)}
+                placeholder={vi ? 'Lời kể sẽ hiện ở đây khi ghi âm. Bạn có thể sửa lại.' : 'The words appear here as you speak. You can fix them later.'}
+              />
+            </div>
+          )}
 
-              {/* Text */}
-              <div>
-                <label className="form-label" htmlFor="story-text-input">{bt.newStory.stepRecord.storyLabel}</label>
+          <div className={styles.details}>
+            {!showWriting && !storyText ? (
+              <button type="button" className={`${a.pill} ${a.pillGhost} ${a.pillBlock}`} onClick={() => setShowWriting(true)}>
+                {vi ? 'Hoặc viết thay vì nói' : 'Or write it instead'}
+              </button>
+            ) : (
+              <div className={a.field}>
+                <label className={a.fieldLabel} htmlFor="story-text-input">{bt.newStory.stepRecord.storyLabel}</label>
                 <textarea
                   id="story-text-input"
-                  className="form-textarea"
+                  className={`${a.textarea} ${styles.serifText}`}
                   placeholder={bt.newStory.stepRecord.storyPlaceholder}
                   value={storyText}
                   onChange={e => setStoryText(e.target.value)}
                   rows={6}
                 />
               </div>
+            )}
 
-              {/* Photo Attachment */}
-              <PhotoUploader
-                onPhotoSelected={setPhotoFile}
-                caption={photoCaption}
-                onCaptionChange={setPhotoCaption}
+            <div className={a.field}>
+              <label className={a.fieldLabel} htmlFor="story-title">{bt.newStory.stepRecord.titleLabel}</label>
+              <input
+                id="story-title"
+                type="text"
+                className={a.input}
+                placeholder={bt.newStory.stepRecord.titlePlaceholder}
+                value={title}
+                onChange={e => setTitle(e.target.value)}
               />
-
-              {/* Mic permission error guidance */}
-              {micError && (
-                <div style={{
-                  background: '#FEF2F2',
-                  border: '1px solid #FECACA',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '0.85rem 1rem',
-                  color: '#991B1B',
-                  fontSize: 'var(--text-sm)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem',
-                  lineHeight: 1.5,
-                }}>
-                  <span>⚠️ {micError}</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      document.getElementById('story-text-input')?.focus();
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--color-brand)',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      padding: 0,
-                      textDecoration: 'underline',
-                      fontSize: 'var(--text-sm)',
-                    }}
-                  >
-                    {lang === 'vi' ? '✍️ Chuyển sang viết câu chuyện vào ô phía trên' : '✍️ Switch to typing your memory instead'}
-                  </button>
-                </div>
-              )}
-
-              {/* Record */}
-              <div className={styles.recordControls}>
-                <button
-                  className={`btn ${isRecording ? styles.recordingBtn : 'btn-primary'}`}
-                  onClick={isRecording ? stopRecording : startRecording}
-                >
-                  {isRecording ? (
-                    <><span className={styles.recDot} /> {bt.newStory.stepRecord.stopRecording} {formatTime(recordingTime)}</>
-                  ) : (
-                    <><span className={styles.recDotWhite} /> {bt.newStory.stepRecord.startRecording}</>
-                  )}
-                </button>
-                {!isRecording && recordingTime > 0 && (
-                  <span className={styles.recorded}>{bt.newStory.stepRecord.recorded} {formatTime(recordingTime)}</span>
-                )}
-              </div>
-
-              {audioUrl && (
-                <div style={{ marginTop: '0.75rem' }}>
-                  <AudioPlayer src={audioUrl} />
-                </div>
-              )}
-
-              {/* Voice Transcript */}
-              {(isRecording || audioTranscript || audioUrl) && (
-                <div style={{
-                  background: '#FFFBF7',
-                  border: '1px solid #F3E7DC',
-                  borderRadius: 'var(--radius-lg, 0.75rem)',
-                  padding: '1rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#8C4325', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <span>📝</span> {bt.story.audioTranscript}
-                    </span>
-                    {isRecording && (
-                      <span style={{ fontSize: '0.75rem', color: '#DC2626', fontWeight: 600 }}>
-                        {bt.story.speechToTextActive}
-                      </span>
-                    )}
-                  </div>
-                  <textarea
-                    rows={3}
-                    className="form-textarea"
-                    value={audioTranscript}
-                    onChange={e => setAudioTranscript(e.target.value)}
-                    placeholder={lang === 'vi' ? 'Bản chép lời giọng nói sẽ hiển thị tại đây khi ghi âm...' : 'Speech-to-text transcript will appear here while recording...'}
-                    style={{ fontSize: '0.9rem', lineHeight: 1.6 }}
-                  />
-                </div>
-              )}
-
-              <button
-                className="btn btn-secondary"
-                style={{ width: '100%', justifyContent: 'center' }}
-                onClick={handleSave}
-                disabled={saving}
-              >
-                {saving ? bt.newStory.stepRecord.saving : bt.newStory.stepRecord.save}
-              </button>
             </div>
+
+            <PhotoUploader
+              onPhotoSelected={setPhotoFile}
+              caption={photoCaption}
+              onCaptionChange={setPhotoCaption}
+            />
           </div>
-        )}
-      </main>
-    </div>
+
+          {localBackupFailed && (
+            <p role="status" className={`${a.notice} ${a.noticeWarm}`}>
+              {vi
+                ? 'Trình duyệt này không lưu tạm được bản ghi âm. Hãy bấm Lưu ngay, hoặc tải bản ghi về máy trước khi rời trang.'
+                : 'This browser could not keep a backup of the recording. Save now, or download it before leaving this page.'}
+            </p>
+          )}
+
+          {saveError && (
+            <div role="alert" className={`${a.notice} ${a.noticeError}`}>
+              <span>{saveError}</span>
+              {audioUrl && (
+                <a href={audioUrl} download={`kyuc-recording.${audioBlob?.type.includes('mp4') ? 'm4a' : 'webm'}`} className={a.noticeLink}>
+                  {vi ? 'Tải bản ghi âm về máy' : 'Download the recording'}
+                </a>
+              )}
+            </div>
+          )}
+
+          <div className={styles.saveBar}>
+            <button
+              className={`${a.pill} ${a.pillTeal} ${a.pillBlock}`}
+              onClick={handleSave}
+              disabled={saving || isRecording}
+            >
+              {saving ? bt.newStory.stepRecord.saving : (vi ? 'Lưu vào kho gia đình' : 'Save to the family archive')}
+            </button>
+            <span className={a.small}>{vi ? 'Chỉ mình bạn thấy cho tới khi bạn chọn chia sẻ.' : 'Only you can see it until you choose to share.'}</span>
+          </div>
+        </div>
+      )}
+    </AppShell>
   );
 }
+
+const WAVE = [26, 44, 34, 58, 40, 66, 30, 52, 38, 60, 28, 46, 36];
 
 export default function NewStoryPage() {
   return (

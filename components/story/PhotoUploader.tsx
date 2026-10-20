@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, ChangeEvent, DragEvent } from 'react';
+import { useLanguage } from '@/lib/LanguageContext';
 import styles from './PhotoUploader.module.css';
 
 interface PhotoUploaderProps {
@@ -16,6 +17,8 @@ export default function PhotoUploader({
   onCaptionChange,
   initialPreview,
 }: PhotoUploaderProps) {
+  const { lang } = useLanguage();
+  const vi = lang === 'vi';
   const [preview, setPreview] = useState<string | null>(initialPreview || null);
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -84,11 +87,11 @@ export default function PhotoUploader({
 
   const processFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file (JPG, PNG, WebP).');
+      alert(vi ? 'Vui lòng chọn một tệp ảnh (JPG, PNG, WebP).' : 'Please upload an image file (JPG, PNG, WebP).');
       return;
     }
     if (file.size > 15 * 1024 * 1024) {
-      alert('File size exceeds the 15MB limit. Please choose a smaller photo.');
+      alert(vi ? 'Ảnh lớn hơn 15MB. Vui lòng chọn ảnh nhỏ hơn.' : 'File size exceeds the 15MB limit. Please choose a smaller photo.');
       return;
     }
     const compressed = await compressImage(file);
@@ -148,38 +151,53 @@ export default function PhotoUploader({
         <div
           className={`${styles.dropzone} ${isDragging ? styles.dropzoneActive : ''}`}
           onClick={() => inputRef.current?.click()}
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              inputRef.current?.click();
+            }
+          }}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           role="button"
           tabIndex={0}
         >
-          <span className={styles.icon}>🖼️</span>
-          <p className={styles.title}>Attach a cherished family photo</p>
-          <p className={styles.hint}>Drag & drop or click to browse (JPG, PNG, WebP)</p>
+          <span className={styles.icon} aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="5" width="18" height="15" rx="3" />
+              <circle cx="9" cy="11" r="2" />
+              <path d="M21 17l-5-5-9 8" />
+            </svg>
+          </span>
+          <span className={styles.text}>
+            <span className={styles.title}>{vi ? 'Thêm một tấm ảnh kỷ niệm' : 'Add a cherished photo'}</span>
+            <span className={styles.hint}>{vi ? 'Chạm để chọn ảnh (JPG, PNG, WebP)' : 'Tap to choose a photo (JPG, PNG, WebP)'}</span>
+          </span>
         </div>
       ) : (
         <div className={styles.previewCard}>
           <div className={styles.imageWrap}>
-            <img src={preview} alt="Memory preview" className={styles.previewImg} />
+            <img src={preview} alt={vi ? 'Ảnh xem trước' : 'Photo preview'} className={styles.previewImg} />
             <button
               type="button"
               className={styles.removeBtn}
               onClick={handleRemove}
-              title="Remove photo"
+              aria-label={vi ? 'Bỏ ảnh' : 'Remove photo'}
             >
-              ✕
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
             </button>
           </div>
-          <div className={styles.captionWrap}>
-            <input
-              type="text"
-              className={styles.captionInput}
-              placeholder="Add photo caption (e.g. Grandma and Mom in Da Lat, 1978)..."
-              value={caption}
-              onChange={(e) => onCaptionChange(e.target.value)}
-            />
-          </div>
+          <input
+            type="text"
+            className={styles.captionInput}
+            placeholder={vi ? 'Chú thích ảnh (VD: Bà và mẹ ở Đà Lạt, 1978)' : 'Caption (e.g. Grandma and Mom in Da Lat, 1978)'}
+            aria-label={vi ? 'Chú thích ảnh' : 'Photo caption'}
+            value={caption}
+            onChange={(e) => onCaptionChange(e.target.value)}
+          />
         </div>
       )}
     </div>

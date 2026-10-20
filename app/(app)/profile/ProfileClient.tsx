@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { backendTranslations } from '@/lib/translations';
-import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
+import { AppShell } from '@/components/app/AppShell';
 import { createClient } from '@/lib/supabase/client';
 import styles from './profile.module.css';
 
@@ -224,11 +224,19 @@ export function ProfileClient({
     setDeleting(true);
     setDeleteError('');
     try {
-      const supabase = createClient();
-      await supabase.from('stories').delete().eq('user_id', userId);
-      await supabase.from('family_members').delete().eq('owner_id', userId);
-      await supabase.from('profiles').delete().eq('id', userId);
-      await supabase.auth.signOut();
+      // Server route deletes recordings, photos and the account itself, and reports any failure.
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: deleteConfirmInput.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error === 'storage_delete_failed'
+          ? (lang === 'vi' ? 'Không xóa được tệp ghi âm/ảnh. Tài khoản chưa bị xóa, vui lòng thử lại.' : 'Could not delete your recordings and photos. Your account was not deleted. Please try again.')
+          : (lang === 'vi' ? 'Không xóa được tài khoản. Vui lòng thử lại hoặc liên hệ hỗ trợ.' : 'Could not delete your account. Please try again or contact support.'));
+      }
+      await createClient().auth.signOut();
       window.location.href = '/login?deleted=true';
     } catch (err: any) {
       setDeleteError(err.message || 'Error deleting account');
@@ -237,32 +245,8 @@ export function ProfileClient({
   };
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <Link href="/dashboard" className={styles.back}>{bt.profile.backToStories}</Link>
-        <Link href="/" className={styles.logo}>
-          kyuc<span>.ai</span>
-        </Link>
-        <div className={styles.headerRight}>
-          <LanguageSwitcher />
-          <form action="/auth/signout" method="POST">
-            <button type="submit" style={{
-              background: 'none',
-              border: 'none',
-              color: '#DC2626',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 500,
-              cursor: 'pointer',
-              padding: '0.4rem 0.8rem',
-              borderRadius: 'var(--radius-md)',
-            }}>
-              {bt.nav.signOut}
-            </button>
-          </form>
-        </div>
-      </header>
-
-      <main className={styles.main}>
+    <AppShell active="profile">
+      <div className={styles.main}>
         {/* Navigation Tabs */}
         <div className={styles.tabNav}>
           <button
@@ -546,7 +530,7 @@ export function ProfileClient({
             </div>
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

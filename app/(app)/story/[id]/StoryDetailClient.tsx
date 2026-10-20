@@ -5,10 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { backendTranslations } from '@/lib/translations';
-import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { createClient } from '@/lib/supabase/client';
 import { ShareModal } from '@/components/story/ShareModal';
 import { AudioPlayer } from '@/components/story/AudioPlayer';
+import { AppShell } from '@/components/app/AppShell';
+import { StoryPhoto } from '@/components/app/StoryPhoto';
+import { categoryTone, visibilityOf } from '@/components/app/storyMeta';
+import { mediaSrc } from '@/lib/media';
+import a from '@/components/app/app.module.css';
 import styles from './story.module.css';
 
 interface Story {
@@ -31,25 +35,33 @@ interface StoryDetailClientProps {
   story: Story;
 }
 
+const VISIBILITY = {
+  vi: { private: 'Riêng tư', family: 'Gia đình', public: 'Công khai' },
+  en: { private: 'Private', family: 'Family', public: 'Public' },
+};
+
 export function StoryDetailClient({ story }: StoryDetailClientProps) {
   const router = useRouter();
   const { lang } = useLanguage();
   const bt = backendTranslations[lang];
+  const vi = lang === 'vi';
 
   const [showShareModal, setShowShareModal] = useState(false);
+  const imageSrc = mediaSrc(story.image_url, 'photos');
+  const audioSrc = mediaSrc(story.audio_url, 'audio');
+  const audioDownloadSrc = mediaSrc(story.audio_url, 'audio', { download: true });
   const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const categoryLabels: Record<string, { en: string; vi: string }> = {
-    roots:        { en: 'Roots',        vi: 'Gốc Rễ' },
-    traditions:   { en: 'Traditions',   vi: 'Truyền Thống' },
-    life_lessons: { en: 'Life Lessons', vi: 'Bài Học Cuộc Đời' },
-  };
-
-  const catLabel = categoryLabels[story.category]?.[lang] || story.category.replace(/_/g, ' ');
-  const question = lang === 'vi'
+  const tone = categoryTone(story.category);
+  const catLabel = tone[lang];
+  const visibility = visibilityOf(story);
+  const question = vi
     ? (story.question_vi || story.question_en)
     : (story.question_en || story.question_vi);
+  const date = new Date(story.created_at).toLocaleDateString(vi ? 'vi-VN' : 'en-US', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
 
   const handleDelete = async () => {
     const confirmDelete = window.confirm(bt.story.deleteConfirm);
@@ -84,197 +96,94 @@ export function StoryDetailClient({ story }: StoryDetailClientProps) {
   };
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <Link href="/dashboard" className={styles.back}>{bt.story.backToDashboard}</Link>
-        <Link href="/" className={styles.logo}>
-          kyuc<span>.ai</span>
-        </Link>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <LanguageSwitcher />
+    <AppShell back={{ href: '/dashboard', label: vi ? 'Câu chuyện' : 'Stories' }}>
+      <article className={`${styles.article} ${a.screenIn}`}>
+        <div className={styles.metaRow}>
+          <span className={`${a.tag} ${tone.className}`}>{catLabel}</span>
+          <span className={a.small}>{date}</span>
+          <button
+            type="button"
+            onClick={() => setShowShareModal(true)}
+            className={`${a.tag} ${a.sand} ${styles.visibility}`}
+            title={vi ? 'Thay đổi quyền riêng tư' : 'Change privacy'}
+          >
+            <VisibilityIcon kind={visibility} />
+            {VISIBILITY[lang][visibility]}
+          </button>
         </div>
-      </header>
 
-      <main className={styles.main}>
-        <article className={styles.article}>
-          {/* Top Bar with Category, Date, and Action Bar */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <div className={styles.meta} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <span className={styles.category}>{catLabel}</span>
-              <span className={styles.date}>
-                {new Date(story.created_at).toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', {
-                  year: 'numeric', month: 'long', day: 'numeric'
-                })}
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowShareModal(true)}
-                style={{
-                  background: (story.visibility || (story.is_public ? 'public' : 'family')) === 'public' ? '#F0FDF4' : (story.visibility || (story.is_public ? 'public' : 'family')) === 'family' ? '#FFF7ED' : '#F3F4F6',
-                  color: (story.visibility || (story.is_public ? 'public' : 'family')) === 'public' ? '#166534' : (story.visibility || (story.is_public ? 'public' : 'family')) === 'family' ? '#9A3412' : '#4B5563',
-                  border: '1px solid currentColor',
-                  borderRadius: '9999px',
-                  padding: '0.15rem 0.55rem',
-                  fontSize: '0.725rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                }}
-                title={lang === 'vi' ? 'Thay đổi quyền riêng tư' : 'Change privacy'}
-              >
-                <span>{(story.visibility || (story.is_public ? 'public' : 'family')) === 'public' ? '🌐' : (story.visibility || (story.is_public ? 'public' : 'family')) === 'family' ? '👨‍👩‍👧‍👦' : '🔒'}</span>
-                <span>
-                  {(story.visibility || (story.is_public ? 'public' : 'family')) === 'public'
-                    ? lang === 'vi' ? 'Công khai' : 'Public'
-                    : (story.visibility || (story.is_public ? 'public' : 'family')) === 'family'
-                    ? lang === 'vi' ? 'Gia đình' : 'Family'
-                    : lang === 'vi' ? 'Riêng tư' : 'Private'}
-                </span>
-              </button>
-            </div>
+        <h1 className={a.title}>{story.title}</h1>
 
-            {/* Quick Actions (Share, Edit, Delete) */}
-            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <button
-                onClick={() => setShowShareModal(true)}
-                className="btn btn-ghost btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }}
-                title={bt.story.shareStory}
-              >
-                <span>↗</span> {bt.story.shareStory}
-              </button>
-              <Link
-                href={`/story/${story.id}/edit`}
-                className="btn btn-ghost btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-              >
-                <span>✏️</span> {bt.story.editStory}
-              </Link>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="btn btn-ghost btn-sm"
-                style={{ color: '#DC2626', borderColor: '#FECACA' }}
-                title={bt.story.deleteStory}
-              >
-                {deleting ? bt.story.deleting : `🗑 ${bt.story.deleteStory}`}
-              </button>
-            </div>
+        {question && (
+          <div className={styles.kyucAsk}>
+            <span className={styles.kyucLabel}>{vi ? 'Kyuc hỏi' : 'Kyuc asked'}</span>
+            <p className={styles.kyucBubble}>{question}</p>
           </div>
+        )}
 
-          {/* Title */}
-          <h1 className={styles.title}>{story.title}</h1>
+        {imageSrc && (
+          <figure className={styles.photo}>
+            <StoryPhoto src={imageSrc} alt={story.photo_caption || story.title} className={styles.photoImg} />
+            {story.photo_caption && <figcaption className={styles.caption}>{story.photo_caption}</figcaption>}
+          </figure>
+        )}
 
-          {/* Question */}
-          {question && (
-            <blockquote className={styles.question}>
-              &ldquo;{question}&rdquo;
-            </blockquote>
-          )}
+        {audioSrc && (
+          <section className={styles.section} aria-label={bt.story.audioSection}>
+            <h2 className={styles.sectionLabel}>{vi ? 'Giọng kể' : 'In their voice'}</h2>
+            <AudioPlayer src={audioSrc} downloadHref={audioDownloadSrc ?? undefined} />
+          </section>
+        )}
 
-          {/* Cherished Photo */}
-          {story.image_url && (
-            <div className={styles.photoWrap}>
-              <img
-                src={story.image_url}
-                alt={story.photo_caption || story.title}
-                className={styles.photoImg}
-              />
-              {story.photo_caption && (
-                <p className={styles.photoCaption}>
-                  <span>📷</span>
-                  {story.photo_caption}
-                </p>
-              )}
+        {story.audio_transcript && (
+          <section className={styles.section}>
+            <div className={styles.sectionHead}>
+              <h2 className={styles.sectionLabel}>{bt.story.transcriptSection}</h2>
+              <button type="button" onClick={handleCopyTranscript} className={`${a.chip} ${styles.copyBtn}`}>
+                {copiedTranscript ? bt.story.transcriptCopied : bt.story.copyTranscript}
+              </button>
             </div>
-          )}
+            <p className={styles.transcript}>{story.audio_transcript}</p>
+          </section>
+        )}
 
-          {/* Audio player */}
-          {story.audio_url && (
-            <div className={styles.audioWrap}>
-              <p className={styles.audioLabel}>🎙 {bt.story.audioSection}</p>
-              <AudioPlayer src={story.audio_url} />
-            </div>
-          )}
-
-          {/* Audio Transcript */}
-          {story.audio_transcript && (
-            <div style={{
-              background: '#FFFBF7',
-              border: '1px solid #F3E7DC',
-              borderRadius: 'var(--radius-lg)',
-              padding: '1.25rem',
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '0.75rem',
-              }}>
-                <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#8C4325', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span>📝</span> {bt.story.transcriptSection}
-                </span>
-                <button
-                  onClick={handleCopyTranscript}
-                  style={{
-                    background: 'none',
-                    border: '1px solid #E5DFD7',
-                    padding: '0.2rem 0.6rem',
-                    borderRadius: 'var(--radius-md)',
-                    fontSize: '0.75rem',
-                    cursor: 'pointer',
-                    color: copiedTranscript ? '#16A34A' : 'var(--color-muted)',
-                    fontWeight: 600,
-                  }}
-                >
-                  {copiedTranscript ? bt.story.transcriptCopied : bt.story.copyTranscript}
-                </button>
-              </div>
-              <p style={{
-                fontSize: '0.95rem',
-                lineHeight: 1.7,
-                color: 'var(--color-ink)',
-                whiteSpace: 'pre-wrap',
-                margin: 0,
-              }}>
-                {story.audio_transcript}
-              </p>
-            </div>
-          )}
-
-          {/* Story text */}
-          {story.content_text && (
+        {story.content_text && story.content_text.trim() && (
+          <section className={styles.section}>
+            {(story.audio_transcript || audioSrc) && (
+              <h2 className={styles.sectionLabel}>{vi ? 'Ghi chép' : 'Written down'}</h2>
+            )}
             <div className={styles.content}>
               {story.content_text.split('\n').map((para: string, i: number) =>
                 para.trim() ? <p key={i}>{para}</p> : null
               )}
             </div>
-          )}
+          </section>
+        )}
 
-          {/* Bottom Actions */}
-          <div className={styles.actions}>
-            {story.audio_url && (
-              <a href={story.audio_url} download className="btn btn-ghost btn-sm">
-                ↓ {lang === 'vi' ? 'Tải âm thanh' : 'Download Audio'}
-              </a>
-            )}
-            <button
-              onClick={() => setShowShareModal(true)}
-              className="btn btn-ghost btn-sm"
-              style={{ fontWeight: 600 }}
-            >
-              <span>↗</span> {bt.story.shareStory}
-            </button>
-            <Link href="/story/new" className="btn btn-primary btn-sm">
-              {lang === 'vi' ? '+ Câu chuyện mới' : '+ New Story'}
-            </Link>
-          </div>
-        </article>
-      </main>
+        <div className={`${a.pillRow} ${styles.actions}`}>
+          <button type="button" onClick={() => setShowShareModal(true)} className={`${a.pill} ${a.pillCoral}`}>
+            {bt.story.shareStory}
+          </button>
+          <Link href={`/story/${story.id}/edit`} className={`${a.pill} ${a.pillSoft}`}>
+            {bt.story.editStory}
+          </Link>
+        </div>
 
-      {/* Share Modal */}
+        <div className={styles.footer}>
+          <Link href="/story/new" className={`${a.pill} ${a.pillGhost} ${a.pillSm}`}>
+            {vi ? '+ Kể thêm một chuyện' : '+ Record another story'}
+          </Link>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            className={`${a.pill} ${a.pillDanger} ${a.pillSm}`}
+          >
+            {deleting ? bt.story.deleting : bt.story.deleteStory}
+          </button>
+        </div>
+      </article>
+
       {showShareModal && (
         <ShareModal
           storyId={story.id}
@@ -283,10 +192,20 @@ export function StoryDetailClient({ story }: StoryDetailClientProps) {
             setShowShareModal(false);
             router.refresh();
           }}
-          initialVisibility={story.visibility || (story.is_public ? 'public' : 'family')}
+          initialVisibility={visibility}
           isPublicInitially={story.is_public}
         />
       )}
-    </div>
+    </AppShell>
+  );
+}
+
+function VisibilityIcon({ kind }: { kind: 'private' | 'family' | 'public' }) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {kind === 'private' && <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></>}
+      {kind === 'family' && <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0" /><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 20a6.5 6.5 0 0 0-3-5.5" /></>}
+      {kind === 'public' && <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></>}
+    </svg>
   );
 }

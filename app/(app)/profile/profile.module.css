@@ -38,7 +38,7 @@
 .main {
   max-width: 640px;
   margin: 0 auto;
-  padding: 3rem 1.5rem 6rem;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 2rem;
@@ -349,4 +349,9 @@
 @media (max-width: 600px) {
   .statsGrid { grid-template-columns: repeat(2, 1fr); }
   .tabBtn { font-size: 0.75rem; padding: 0.5rem 0.25rem; }
+}
+
+/* Khung app (AppShell) đã lo lề trang và thanh điều hướng */
+@media (max-width: 760px) {
+  .main { gap: 1.75rem; }
 }
