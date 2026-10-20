@@ -113,7 +113,6 @@ function NewStoryContent() {
   };
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recognitionRef = useRef<any>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -200,35 +199,6 @@ function NewStoryContent() {
       setIsRecording(true);
       setRecordingTime(0);
       timerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
-
-      // Web Speech API real-time transcription
-      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-        try {
-          const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-          const recognition = new SpeechRecognition();
-          recognition.continuous = true;
-          recognition.interimResults = true;
-          recognition.lang = lang === 'vi' ? 'vi-VN' : 'en-US';
-
-          recognition.onresult = (event: any) => {
-            let transcriptText = '';
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-              if (event.results[i].isFinal) {
-                transcriptText += event.results[i][0].transcript + ' ';
-              }
-            }
-            if (transcriptText) {
-              setAudioTranscript(prev => (prev ? prev + ' ' : '') + transcriptText.trim());
-            }
-          };
-
-          recognition.onerror = () => {};
-          recognition.start();
-          recognitionRef.current = recognition;
-        } catch {
-          // ignore speech recognition error
-        }
-      }
     } catch {
       setMicError(lang === 'vi'
         ? 'Trình duyệt chưa cho phép truy cập micro. Hãy bấm vào biểu tượng ổ khóa cạnh thanh địa chỉ để bật lại quyền, hoặc chuyển sang viết trực tiếp câu chuyện bên dưới.'
@@ -241,12 +211,6 @@ function NewStoryContent() {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       if (timerRef.current) clearInterval(timerRef.current);
-    }
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {}
-      recognitionRef.current = null;
     }
   }, [isRecording]);
 
@@ -453,14 +417,16 @@ function NewStoryContent() {
           {audioUrl && !isRecording && (
             <div className={`${a.stack} ${a.pop1}`}>
               <AudioPlayer src={audioUrl} title={vi ? 'Bản ghi vừa xong' : 'Your recording'} />
+              <span className={a.small}>
+                {vi ? 'Sau khi lưu, Kyuc sẽ tự chép lại lời kể thành chữ.' : 'After you save, Kyuc writes the recording down as text.'}
+              </span>
             </div>
           )}
 
-          {(isRecording || audioTranscript || audioUrl) && (
+          {audioTranscript && !isRecording && (
             <div className={`${a.field} ${styles.transcript}`}>
               <label className={a.fieldLabel} htmlFor="story-transcript">
                 {bt.story.audioTranscript}
-                {isRecording && <span className={styles.listening}> · {vi ? 'đang nghe…' : 'listening…'}</span>}
               </label>
               <textarea
                 id="story-transcript"

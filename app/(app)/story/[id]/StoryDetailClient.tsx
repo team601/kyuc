@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -51,6 +51,9 @@ export function StoryDetailClient({ story }: StoryDetailClientProps) {
   const audioSrc = mediaSrc(story.audio_url, 'audio');
   const audioDownloadSrc = mediaSrc(story.audio_url, 'audio', { download: true });
   const [copiedTranscript, setCopiedTranscript] = useState(false);
+  const [transcript, setTranscript] = useState(story.audio_transcript?.trim() || '');
+  const [transcribing, setTranscribing] = useState<'idle' | 'working' | 'error' | 'off'>('idle');
+  const autoTried = useRef(false);
   const [deleting, setDeleting] = useState(false);
 
   const tone = categoryTone(story.category);
@@ -84,10 +87,39 @@ export function StoryDetailClient({ story }: StoryDetailClientProps) {
     }
   };
 
-  const handleCopyTranscript = async () => {
-    if (!story.audio_transcript) return;
+  // Chép lời trên server (Whisper qua Groq); bản ghi chưa có lời thì tự chạy một lần khi mở trang
+  const runTranscription = async () => {
+    setTranscribing('working');
     try {
-      await navigator.clipboard.writeText(story.audio_transcript);
+      const res = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storyId: story.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.transcript) {
+        setTranscript(data.transcript);
+        setTranscribing('idle');
+      } else {
+        setTranscribing(data.error === 'not_configured' ? 'off' : 'error');
+      }
+    } catch {
+      setTranscribing('error');
+    }
+  };
+
+  useEffect(() => {
+    if (autoTried.current || !audioSrc || transcript) return;
+    autoTried.current = true;
+    runTranscription();
+    // chỉ chạy một lần khi mở trang
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCopyTranscript = async () => {
+    if (!transcript) return;
+    try {
+      await navigator.clipboard.writeText(transcript);
       setCopiedTranscript(true);
       setTimeout(() => setCopiedTranscript(false), 2000);
     } catch {
@@ -135,15 +167,31 @@ export function StoryDetailClient({ story }: StoryDetailClientProps) {
           </section>
         )}
 
-        {story.audio_transcript && (
-          <section className={styles.section}>
+        {audioSrc && transcribing !== 'off' && (transcript || transcribing !== 'idle') && (
+          <section className={styles.section} aria-busy={transcribing === 'working'}>
             <div className={styles.sectionHead}>
               <h2 className={styles.sectionLabel}>{bt.story.transcriptSection}</h2>
-              <button type="button" onClick={handleCopyTranscript} className={`${a.chip} ${styles.copyBtn}`}>
-                {copiedTranscript ? bt.story.transcriptCopied : bt.story.copyTranscript}
-              </button>
+              {transcript && transcribing !== 'working' && (
+                <button type="button" onClick={handleCopyTranscript} className={`${a.chip} ${styles.copyBtn}`}>
+                  {copiedTranscript ? bt.story.transcriptCopied : bt.story.copyTranscript}
+                </button>
+              )}
             </div>
-            <p className={styles.transcript}>{story.audio_transcript}</p>
+            {transcribing === 'working' ? (
+              <div className={styles.transcribing} role="status">
+                <span className={styles.dots} aria-hidden="true"><span /><span /><span /></span>
+                {vi ? 'Kyuc đang nghe và chép lại lời kể…' : 'Kyuc is listening and writing it down…'}
+              </div>
+            ) : transcribing === 'error' ? (
+              <div className={`${a.notice} ${a.noticeWarm}`} role="status">
+                <span>{vi ? 'Chưa chép lời được bản ghi này.' : 'Could not transcribe this recording yet.'}</span>
+                <button type="button" className={a.noticeLink} onClick={runTranscription}>
+                  {vi ? 'Thử lại' : 'Try again'}
+                </button>
+              </div>
+            ) : (
+              <p className={styles.transcript}>{transcript}</p>
+            )}
           </section>
         )}
 
