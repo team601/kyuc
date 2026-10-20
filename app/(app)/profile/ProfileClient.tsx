@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { backendTranslations } from '@/lib/translations';
-import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
+import { AppShell } from '@/components/app/AppShell';
 import { createClient } from '@/lib/supabase/client';
 import styles from './profile.module.css';
 
@@ -245,32 +245,8 @@ export function ProfileClient({
   };
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <Link href="/dashboard" className={styles.back}>{bt.profile.backToStories}</Link>
-        <Link href="/" className={styles.logo}>
-          kyuc<span>.ai</span>
-        </Link>
-        <div className={styles.headerRight}>
-          <LanguageSwitcher />
-          <form action="/auth/signout" method="POST">
-            <button type="submit" style={{
-              background: 'none',
-              border: 'none',
-              color: '#DC2626',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 500,
-              cursor: 'pointer',
-              padding: '0.4rem 0.8rem',
-              borderRadius: 'var(--radius-md)',
-            }}>
-              {bt.nav.signOut}
-            </button>
-          </form>
-        </div>
-      </header>
-
-      <main className={styles.main}>
+    <AppShell active="profile">
+      <div className={styles.main}>
         {/* Navigation Tabs */}
         <div className={styles.tabNav}>
           <button
@@ -554,7 +530,7 @@ export function ProfileClient({
             </div>
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

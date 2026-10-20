@@ -6,9 +6,12 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { backendTranslations } from '@/lib/translations';
-import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
-import { categoryMeta, type Category } from '@/lib/questions';
+import { questions } from '@/lib/questions';
 import { mediaSrc } from '@/lib/media';
+import { AppShell } from '@/components/app/AppShell';
+import { StoryPhoto } from '@/components/app/StoryPhoto';
+import { categoryTone } from '@/components/app/storyMeta';
+import a from '@/components/app/app.module.css';
 import { loadDraft, clearDraft } from '@/lib/draftStore';
 import { uploadStoryAudio } from '@/lib/storageUpload';
 import styles from './dashboard.module.css';
@@ -134,6 +137,7 @@ export function DashboardClient({ userId, displayName, userEmail, stories, famil
     }
   };
 
+  const vi = lang === 'vi';
   const audioCount = stories?.filter(s => s.audio_url).length ?? 0;
   const myStories = (stories || []).filter(s => s.user_id === userId);
   const familyStories = (stories || []).filter(s => s.user_id !== userId);
@@ -146,294 +150,167 @@ export function DashboardClient({ userId, displayName, userEmail, stories, famil
       ? myStories
       : familyStories;
 
+  // Câu hỏi hôm nay: đổi theo ngày, bấm "Câu khác" để xem câu tiếp theo
+  const [questionOffset, setQuestionOffset] = useState(0);
+  const [today, setToday] = useState<Date | null>(null);
+  // ngày lấy theo máy người dùng sau khi hydrate, tránh lệch múi giờ giữa server và trình duyệt
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setToday(new Date()), []);
+  const dayIndex = today ? Math.floor(today.getTime() / 86400000) : 0;
+  const todayQuestion = questions[(dayIndex + questionOffset) % questions.length];
+  const firstName = displayName.split(' ')[0] || displayName;
+  const countLabel = (n: number, one: string, many: string, viLabel = vi) => `${n} ${viLabel || n === 1 ? one : many}`;
+
   return (
-    <div className={styles.page}>
-      {/* Sidebar */}
-      <aside className={styles.sidebar}>
-        <Link href="/" className={styles.logo}>
-          kyuc<span>.ai</span>
-        </Link>
+    <AppShell active="home" wide>
+      <div className={styles.layout}>
+        <section className={`${styles.welcome} ${a.screenIn}`}>
+          <p className={a.muted} suppressHydrationWarning>
+            {today
+              ? today.toLocaleDateString(vi ? 'vi-VN' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' })
+              : ' '}
+          </p>
+          <h1 className={a.hello}>{vi ? `Chào ${firstName}` : `Hello, ${firstName}`}</h1>
+          <p className={a.muted}>
+            {stories?.length
+              ? bt.dashboard.subHasStories(stories.length)
+              : bt.dashboard.subNoStories}
+          </p>
 
-        <nav className={styles.nav}>
-          <Link href="/dashboard" className={`${styles.navItem} ${styles.navActive}`}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
-              <polyline points="9 22 9 12 15 12 15 22"/>
-            </svg>
-            {bt.nav.myStories}
-          </Link>
-          <Link href="/story/new" className={styles.navItem}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
-            </svg>
-            {bt.nav.newStory}
-          </Link>
-          <Link href="/family" className={styles.navItem}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
-            </svg>
-            {bt.nav.familySpace}
-          </Link>
-          <Link href="/profile" className={styles.navItem}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
-            </svg>
-            {bt.nav.profile}
-          </Link>
-        </nav>
-
-        <div className={styles.sidebarFooter}>
-          {/* Language Switcher */}
-          <div className={styles.langRow}>
-            <LanguageSwitcher />
-          </div>
-
-          <Link href="/profile" className={styles.userInfo}>
-            <div className={styles.avatar}>{displayName[0].toUpperCase()}</div>
-            <div className={styles.userDetails}>
-              <p className={styles.userName}>{displayName}</p>
-              <p className={styles.userEmail}>{userEmail}</p>
-            </div>
-          </Link>
-          <form action="/auth/signout" method="POST">
-            <button type="submit" className={styles.signOutBtn} id="dashboard-sidebar-signout">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
+          <div className={`${a.qCard} ${styles.qCard}`}>
+            <span className={a.qLabel}>{vi ? 'Câu hỏi hôm nay' : "Today's question"}</span>
+            <p className={a.qText}>{todayQuestion[lang]}</p>
+            <button type="button" className={styles.otherQ} onClick={() => setQuestionOffset(o => o + 1)}>
+              {vi ? 'Câu khác' : 'Another question'}
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 12a9 9 0 1 1-3-6.7L21 8" /><path d="M21 3v5h-5" />
               </svg>
-              <span>{bt.nav.signOut}</span>
             </button>
-          </form>
-        </div>
-      </aside>
+          </div>
 
-      {/* Main content */}
-      <main className={styles.main}>
-        {/* Mobile top bar */}
-        <div className={styles.mobileBar}>
-          <Link href="/" className={styles.mobileLogo}>
-            kyuc<span>.ai</span>
+          <Link
+            href={`/story/new?category=${todayQuestion.category}&q=${todayQuestion.id}`}
+            className={`${a.pill} ${a.pillCoral} ${a.pillBlock}`}
+          >
+            <span className={a.recDot} aria-hidden="true" />
+            {vi ? 'Bắt đầu kể' : 'Start telling'}
           </Link>
-          <div className={styles.mobileActions}>
-            <LanguageSwitcher />
-            <Link href="/family" className={styles.mobileLink}>{bt.nav.familySpace}</Link>
-            <Link href="/profile" className={styles.mobileLink}>{bt.nav.profile}</Link>
-            <form action="/auth/signout" method="POST">
-              <button type="submit" className={styles.mobileSignOutBtn}>
-                {bt.nav.signOut}
-              </button>
-            </form>
-          </div>
-        </div>
 
-        <div className={styles.header}>
-          <div>
-            <h1 className={styles.greeting}>{bt.dashboard.greeting}, {displayName} 👋</h1>
-            <p className={styles.greetingSub}>
-              {stories?.length
-                ? bt.dashboard.subHasStories(stories.length)
-                : bt.dashboard.subNoStories}
-            </p>
+          <div className={styles.stats}>
+            <span className={`${a.tag} ${a.blush}`}>{countLabel(stories?.length ?? 0, vi ? 'câu chuyện' : 'story', 'stories')}</span>
+            <span className={`${a.tag} ${a.butter}`}>{countLabel(audioCount, vi ? 'bản ghi âm' : 'recording', 'recordings')}</span>
+            <Link href="/family" className={`${a.tag} ${a.mint}`}>{countLabel(familyMemberCount, vi ? 'người trong nhà' : 'family member', 'family members', vi)}</Link>
           </div>
-          <div className={styles.headerActions}>
-            <Link href="/story/new" className="btn btn-primary">
-              {bt.dashboard.newStoryBtn}
-            </Link>
-            <form action="/auth/signout" method="POST" className={styles.headerSignOutForm}>
-              <button type="submit" className={styles.headerSignOutBtn} id="dashboard-header-signout" title={bt.nav.signOut}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                  <polyline points="16 17 21 12 16 7"/>
-                  <line x1="21" y1="12" x2="9" y2="12"/>
+        </section>
+
+        <section className={styles.listCol} aria-label={bt.nav.myStories}>
+          {pendingDraft && (
+            <div className={`${a.notice} ${a.noticeWarm} ${a.pop1}`}>
+              <strong className={styles.draftTitle}>
+                {vi ? 'Bạn có một ký ức chưa lưu từ trang chủ' : 'You have an unsaved memory from the homepage'}
+              </strong>
+              <span>
+                &ldquo;{vi ? pendingDraft.questionVi : pendingDraft.questionEn}&rdquo;
+                {pendingDraft.audio && (vi ? ' · có kèm bản ghi âm' : ' · includes a voice recording')}
+              </span>
+              {claimError && <span role="alert" className={styles.draftError}>{claimError}</span>}
+              <div className={styles.draftActions}>
+                <button onClick={handleClaimDraft} disabled={claimingDraft} className={`${a.pill} ${a.pillCoral} ${a.pillSm}`}>
+                  {claimingDraft
+                    ? (vi ? 'Đang lưu…' : 'Saving…')
+                    : (vi ? 'Lưu vào tài khoản' : 'Save to my archive')}
+                </button>
+                <button onClick={handleDismissDraft} className={`${a.pill} ${a.pillSm} ${styles.draftDismiss}`}>
+                  {vi ? 'Bỏ qua' : 'Dismiss'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className={styles.listHead}>
+            <h2 className={styles.listTitle}>{vi ? 'Kho câu chuyện' : 'Your archive'}</h2>
+            {familyStoriesCount > 0 && (
+              <div className={a.chips} role="tablist">
+                {([
+                  ['all', bt.dashboard.tabs.all, stories?.length ?? 0],
+                  ['mine', bt.dashboard.tabs.mine, myStoriesCount],
+                  ['family', bt.dashboard.tabs.family, familyStoriesCount],
+                ] as const).map(([key, label, count]) => (
+                  <button
+                    key={key}
+                    role="tab"
+                    aria-selected={activeTab === key}
+                    onClick={() => setActiveTab(key)}
+                    className={`${a.chip} ${activeTab === key ? a.chipOn : ''}`}
+                  >
+                    {label} · {count}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {displayedStories.length === 0 ? (
+            <div className={styles.empty}>
+              <span className={styles.emptyIcon} aria-hidden="true">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
                 </svg>
-                <span>{bt.nav.signOut}</span>
-              </button>
-            </form>
-          </div>
-        </div>
-
-        {/* Pending Pre-signup Draft Recovery Card */}
-        {pendingDraft && (
-          <div style={{
-            background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
-            border: '1px solid #FDBA74',
-            borderRadius: 'var(--radius-xl)',
-            padding: '1.25rem 1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            marginBottom: '1.5rem',
-            flexWrap: 'wrap',
-          }}>
-            <div>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#C2410C', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>✨</span> {lang === 'vi' ? 'Bạn có một ký ức chưa lưu từ trang chủ!' : 'You have an unsaved memory from the homepage!'}
-              </h3>
-              <p style={{ fontSize: '0.875rem', color: '#9A3412', marginTop: '0.25rem' }}>
-                &ldquo;{lang === 'vi' ? pendingDraft.questionVi : pendingDraft.questionEn}&rdquo;
-              </p>
-              {pendingDraft.audio && (
-                <p style={{ fontSize: '0.875rem', color: '#9A3412', marginTop: '0.25rem' }}>
-                  🎙 {lang === 'vi' ? 'Có kèm bản ghi âm' : 'Includes a voice recording'}
-                </p>
-              )}
-              {claimError && (
-                <p role="alert" style={{ fontSize: '0.875rem', color: '#991B1B', marginTop: '0.5rem' }}>
-                  {claimError}
-                </p>
-              )}
+              </span>
+              <h3 className={styles.emptyTitle}>{bt.dashboard.empty.title}</h3>
+              <p className={a.muted}>{bt.dashboard.empty.desc}</p>
+              <Link href="/story/new" className={`${a.pill} ${a.pillCoral}`}>{bt.dashboard.empty.cta}</Link>
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <button
-                onClick={handleClaimDraft}
-                disabled={claimingDraft}
-                className="btn btn-primary"
-                style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
-              >
-                {claimingDraft
-                  ? (lang === 'vi' ? 'Đang lưu…' : 'Saving…')
-                  : (lang === 'vi' ? 'Lưu vào tài khoản ngay' : 'Save to archive now')}
-              </button>
-              <button
-                onClick={handleDismissDraft}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#9A3412',
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                  padding: '0.5rem',
-                }}
-              >
-                {lang === 'vi' ? 'Bỏ qua' : 'Dismiss'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Stats */}
-        <div className={styles.stats}>
-          <div className={styles.stat}>
-            <span className={styles.statNum}>{stories?.length ?? 0}</span>
-            <span className={styles.statLabel}>{bt.dashboard.stats.stories}</span>
-          </div>
-          <div className={styles.stat}>
-            <span className={styles.statNum}>{audioCount}</span>
-            <span className={styles.statLabel}>{bt.dashboard.stats.audioRecordings}</span>
-          </div>
-          <div className={styles.stat}>
-            <span className={styles.statNum}>{familyMemberCount}</span>
-            <span className={styles.statLabel}>{bt.dashboard.stats.familyMember}</span>
-          </div>
-        </div>
-
-        {/* Tab Filters if family stories exist */}
-        {stories && stories.length > 0 && familyStoriesCount > 0 && (
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '0.85rem' }}>
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`btn btn-sm ${activeTab === 'all' ? 'btn-primary' : 'btn-ghost'}`}
-              style={{ fontSize: '0.825rem', padding: '0.4rem 0.85rem' }}
-            >
-              {bt.dashboard.tabs.all} ({stories.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('mine')}
-              className={`btn btn-sm ${activeTab === 'mine' ? 'btn-primary' : 'btn-ghost'}`}
-              style={{ fontSize: '0.825rem', padding: '0.4rem 0.85rem' }}
-            >
-              {bt.dashboard.tabs.mine} ({myStoriesCount})
-            </button>
-            <button
-              onClick={() => setActiveTab('family')}
-              className={`btn btn-sm ${activeTab === 'family' ? 'btn-primary' : 'btn-ghost'}`}
-              style={{ fontSize: '0.825rem', padding: '0.4rem 0.85rem' }}
-            >
-              👨‍👩‍👧‍👦 {bt.dashboard.tabs.family} ({familyStoriesCount})
-            </button>
-          </div>
-        )}
-
-        {/* Stories grid */}
-        {!displayedStories || displayedStories.length === 0 ? (
-          <div className={styles.empty}>
-            <div className={styles.emptyIcon}>📖</div>
-            <h3 className={styles.emptyTitle}>{bt.dashboard.empty.title}</h3>
-            <p className={styles.emptyDesc}>{bt.dashboard.empty.desc}</p>
-            <Link href="/story/new" className="btn btn-primary">
-              {bt.dashboard.empty.cta}
-            </Link>
-          </div>
-        ) : (
-          <div className={styles.grid}>
-            {displayedStories.map(story => (
-              <Link href={`/story/${story.id}`} key={story.id} className={styles.storyCard}>
-                {mediaSrc(story.image_url, 'photos') && (
-                  <div className={styles.cardThumb}>
-                    <img
-                      src={mediaSrc(story.image_url, 'photos')!}
-                      alt={story.title}
-                      className={styles.cardThumbImg}
-                      loading="lazy"
-                    />
-                  </div>
-                )}
-                {story.isFamilyStory && (
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    background: '#FFF2EE',
-                    color: 'var(--color-brand)',
-                    border: '1px solid #FED8CE',
-                    borderRadius: '999px',
-                    padding: '0.2rem 0.6rem',
-                    fontSize: '0.725rem',
-                    fontWeight: 700,
-                    width: 'fit-content',
-                    marginBottom: '0.5rem',
-                  }}>
-                    <span>👨‍👩‍👧‍👦</span>
-                    <span>{bt.dashboard.fromAuthor(story.authorName || bt.dashboard.familyBadge)}{story.authorRole ? ` (${story.authorRole})` : ''}</span>
-                  </div>
-                )}
-                <div className={styles.storyMeta}>
-                  <span className={styles.storyCategory}>
-                    {categoryMeta[story.category as Category]?.label[lang] || story.category.replace(/_/g, ' ')}
-                  </span>
-                  <span className={styles.storyDate}>
-                    {new Date(story.created_at).toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric'
-                    })}
-                  </span>
-                </div>
-                <h3 className={styles.storyTitle}>{story.title}</h3>
-                {(story.question_en || story.question_vi) && (
-                  <p className={styles.storyQuestion}>
-                    &ldquo;{lang === 'vi' ? (story.question_vi || story.question_en) : (story.question_en || story.question_vi)}&rdquo;
-                  </p>
-                )}
-                {story.content_text && (
-                  <p className={styles.storyPreview}>
-                    {story.content_text.slice(0, 120)}…
-                  </p>
-                )}
-                <div className={styles.storyFooter}>
-                  {story.audio_url && (
-                    <span className={styles.audioTag}>{bt.dashboard.story.audioRecorded}</span>
-                  )}
-                  <span className={styles.readMore}>{bt.dashboard.story.readMore}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
+          ) : (
+            <ul className={styles.list}>
+              {displayedStories.map((story, i) => {
+                const tone = categoryTone(story.category);
+                const thumb = mediaSrc(story.image_url, 'photos');
+                const q = vi ? (story.question_vi || story.question_en) : (story.question_en || story.question_vi);
+                return (
+                  <li key={story.id} className={i < 6 ? a.screenIn : undefined} style={i < 6 ? { animationDelay: `${0.05 * i}s` } : undefined}>
+                    <Link href={`/story/${story.id}`} className={styles.row}>
+                      {thumb ? (
+                        <StoryPhoto src={thumb} alt="" className={styles.thumb} compact />
+                      ) : (
+                        <span className={`${styles.thumb} ${styles.thumbTone} ${tone.className}`} aria-hidden="true">
+                          {story.audio_url ? (
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+                            </svg>
+                          ) : (
+                            <span className={styles.thumbLetter}>{(story.title || '?').trim()[0]?.toUpperCase()}</span>
+                          )}
+                        </span>
+                      )}
+                      <span className={styles.rowText}>
+                        <span className={styles.rowTitle}>{story.title}</span>
+                        {q && q !== story.title && <span className={styles.rowQuestion}>{q}</span>}
+                        <span className={styles.rowMeta}>
+                          <span className={`${a.tag} ${tone.className}`}>{tone[lang]}</span>
+                          {story.isFamilyStory && (
+                            <span className={`${a.tag} ${a.sand}`}>
+                              {bt.dashboard.fromAuthor(story.authorName || bt.dashboard.familyBadge)}
+                            </span>
+                          )}
+                          {story.audio_url && (
+                            <span className={styles.audioMark} aria-label={vi ? 'Có ghi âm' : 'Has audio'}>
+                              <svg width="10" height="10" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor" /></svg>
+                            </span>
+                          )}
+                          <span className={a.small}>
+                            {new Date(story.created_at).toLocaleDateString(vi ? 'vi-VN' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                        </span>
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      </div>
+    </AppShell>
   );
 }

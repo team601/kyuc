@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { backendTranslations } from '@/lib/translations';
-import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
+import { AppShell } from '@/components/app/AppShell';
 import { createClient } from '@/lib/supabase/client';
 import { mediaSrc, storagePathFrom } from '@/lib/media';
 import styles from './family.module.css';
@@ -298,35 +298,8 @@ export function FamilyClient({
   }, [pendingInvites]);
 
   return (
-    <div className={styles.page}>
-      {/* Header */}
-      <header className={styles.header}>
-        <Link href="/dashboard" className={styles.back}>
-          {bt.family.backToDashboard}
-        </Link>
-        <Link href="/" className={styles.logo}>
-          kyuc<span>.ai</span>
-        </Link>
-        <div className={styles.headerRight}>
-          <LanguageSwitcher />
-          <form action="/auth/signout" method="POST">
-            <button type="submit" style={{
-              background: 'none',
-              border: 'none',
-              color: '#DC2626',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 500,
-              cursor: 'pointer',
-              padding: '0.4rem 0.8rem',
-              borderRadius: 'var(--radius-md)',
-            }}>
-              {bt.nav.signOut}
-            </button>
-          </form>
-        </div>
-      </header>
-
-      <main className={styles.main}>
+    <AppShell active="family" wide>
+      <div className={styles.main}>
         {/* Hero */}
         <div className={styles.hero}>
           <div className={styles.heroIcon}>👨‍👩‍👧‍👦</div>
@@ -434,11 +407,11 @@ export function FamilyClient({
                       )}
                     </p>
                     <p className={styles.memberRole}>{member.role || (lang === 'vi' ? 'Người thân' : 'Family')}</p>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginTop: '0.25rem' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
                       <span className={`${styles.memberStatus} ${member.status === 'accepted' ? styles.statusAccepted : styles.statusPending}`}>
                         {member.status === 'accepted' ? `✓ ${bt.family.acceptedStatus}` : `⏳ ${bt.family.pendingStatus}`}
                       </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.35rem' }}>
                         {!member.isOwner && (
                           <>
                             <button
@@ -586,7 +559,7 @@ export function FamilyClient({
             </div>
           )}
         </section>
-      </main>
+      </div>
 
       {/* Invite Modal */}
       {showInviteModal && (
@@ -796,6 +769,6 @@ export function FamilyClient({
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

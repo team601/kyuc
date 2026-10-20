@@ -1,11 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { backendTranslations } from '@/lib/translations';
-import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
+import { AppShell } from '@/components/app/AppShell';
 import { createClient } from '@/lib/supabase/client';
 import PhotoUploader from '@/components/story/PhotoUploader';
 import { mediaSrc, storagePathFrom } from '@/lib/media';
@@ -173,18 +172,8 @@ export function StoryEditClient({ story }: { story: Story }) {
   };
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <Link href={`/story/${story.id}`} className={styles.back}>
-          {bt.story.backToDashboard}
-        </Link>
-        <Link href="/" className={styles.logo}>
-          kyuc<span>.ai</span>
-        </Link>
-        <LanguageSwitcher />
-      </header>
-
-      <main className={styles.main}>
+    <AppShell back={{ href: `/story/${story.id}`, label: lang === 'vi' ? 'Câu chuyện' : 'Story' }}>
+      <div className={styles.main}>
         <form onSubmit={handleSave} className={styles.card}>
           <h1 className={styles.pageTitle}>{bt.story.editTitle}</h1>
 
@@ -328,7 +317,7 @@ export function StoryEditClient({ story }: { story: Story }) {
             </button>
           </div>
         </form>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

@@ -39,7 +39,7 @@
 .main {
   max-width: 680px;
   margin: 0 auto;
-  padding: 3rem 1.5rem 6rem;
+  padding: 0;
 }
 
 .card {
@@ -180,4 +180,12 @@
   background: #FEF2F2;
   color: #991B1B;
   border: 1px solid #FECACA;
+}
+
+/* Khung app (AppShell) đã lo lề trang và thanh điều hướng */
+@media (max-width: 760px) {
+  .main { gap: 1.75rem; }
+}
+@media (max-width: 760px) {
+  .card { padding: 1.5rem 1.25rem; }
 }

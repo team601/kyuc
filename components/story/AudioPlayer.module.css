@@ -1,154 +1,137 @@
-.playerCard {
-  background: #FFFDF9;
-  border: 1px solid #EFE8DE;
-  border-radius: var(--radius-xl, 1rem);
-  padding: 1.15rem 1.35rem;
-  box-shadow: 0 4px 16px rgba(45, 41, 38, 0.04);
+/* Trình phát theo kiểu thanh âm thanh trong mockup điện thoại: nền hồng nhạt, nút tròn san hô */
+
+.player {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
-  transition: all 0.2s ease;
+  gap: 10px;
+  width: 100%;
 }
 
-.playerCard:hover {
-  border-color: #E2D7C8;
-  box-shadow: 0 6px 20px rgba(45, 41, 38, 0.07);
-}
-
-.mainRow {
+.row {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 12px;
+  background: var(--color-blush);
+  border-radius: 20px;
+  padding: 12px 12px 12px 12px;
+  min-width: 0;
 }
 
 .playBtn {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--color-brand, var(--color-brand));
-  color: white;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
   border: none;
-  cursor: pointer;
+  border-radius: 50%;
+  background: var(--color-brand);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  transition: transform 0.15s ease, background-color 0.15s ease;
-  box-shadow: 0 3px 10px rgba(232, 80, 58, 0.3);
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
 }
+.playBtn:hover { background: var(--color-brand-dark); }
+.playBtn:active { transform: scale(0.94); }
+.playBtn:disabled { opacity: 0.45; cursor: default; }
+.playing { animation: pulse 1.6s ease-out infinite; }
 
-.playBtn:hover {
-  transform: scale(1.05);
-  background: var(--color-brand-dark);
-}
-
-.playBtn:active {
-  transform: scale(0.96);
-}
-
-.scrubberArea {
-  flex: 1;
+.body {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 4px;
 }
 
-.progressBarContainer {
-  position: relative;
-  width: 100%;
-  height: 8px;
-  background: #EFE7DE;
-  border-radius: 9999px;
-  cursor: pointer;
+.title {
+  font-size: 13px;
+  color: var(--color-muted);
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.progressBar {
-  height: 100%;
-  background: linear-gradient(90deg, var(--color-brand), #F0705E);
-  border-radius: 9999px;
-  transition: width 0.1s linear;
+.wave {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 30px;
+  cursor: pointer;
+  border-radius: 6px;
+  outline-offset: 4px;
 }
 
-.timeRow {
+.bar {
+  flex: 1 1 0;
+  min-width: 2px;
+  max-width: 5px;
+  border-radius: 2px;
+  background: rgba(201, 61, 42, 0.25);
+  transition: background 0.2s;
+}
+.barOn { background: var(--color-brand); }
+
+.times {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  font-size: 0.75rem;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--color-muted);
-  font-weight: 500;
-}
-
-.controlsRight {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }
 
 .speedBtn {
-  background: #F4EFEA;
-  border: 1px solid var(--color-border);
-  color: #55504D;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.3rem 0.6rem;
-  border-radius: var(--radius-md, 0.5rem);
+  flex: 0 0 auto;
+  min-width: 44px;
+  height: 32px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--color-ink);
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
-  transition: all 0.15s ease;
 }
-
-.speedBtn:hover {
-  background: #EAE3DC;
-  color: #2D2926;
-}
+.speedBtn:hover { background: #fff; }
 
 .downloadLink {
-  background: transparent;
-  border: 1px solid var(--color-border);
-  color: var(--color-muted);
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: 0.3rem 0.65rem;
-  border-radius: var(--radius-md, 0.5rem);
-  text-decoration: none;
-  display: flex;
+  align-self: flex-start;
+  display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  transition: all 0.15s ease;
+  gap: 6px;
+  padding: 2px 4px;
+  font-size: 13px;
+  color: var(--color-muted);
 }
-
-.downloadLink:hover {
-  background: #F4EFEA;
-  color: #2D2926;
-  border-color: #D6CEC5;
-}
+.downloadLink:hover { color: var(--color-ink); }
 
 .errorBanner {
-  background: #FEF2F2;
-  border: 1px solid #FECACA;
-  border-radius: var(--radius-md, 0.5rem);
-  padding: 0.65rem 0.85rem;
-  font-size: 0.8rem;
-  color: #991B1B;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 6px 12px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: var(--color-butter);
+  color: #5C4710;
+  font-size: 14px;
+  line-height: 1.45;
 }
-
 .errorBanner a {
-  color: #DC2626;
-  font-weight: 600;
+  font-weight: 500;
   text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
 }
 
-.errorBanner button {
-  background: none;
-  border: 1px solid #FECACA;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  cursor: pointer;
-  color: #991B1B;
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(232, 80, 58, 0.45); }
+  100% { box-shadow: 0 0 0 14px rgba(232, 80, 58, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .playing { animation: none; }
 }
